@@ -1,4 +1,4 @@
-module nft
+module github.com/weeaa/nft
 
 go 1.20
 
