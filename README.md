@@ -26,7 +26,7 @@ These instructions will guide you through setting up and running the NFT Monitor
 
 ### Prerequisites
 
-- GoLang 1.19 or later
+- GoLang 1.20 or later
 
 ### Usage
 
