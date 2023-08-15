@@ -12,13 +12,21 @@ An NFT monitoring toolkit for tracking NFT drops, sales, listings, and more.
   - [x] New Verified Contracts
 - [x] ExchangeArt Monitoring
   - [x] New Drops by Artist
-- [x] LMNFT Monitoring
-  - [x] SOL Top Hype Drops
+- [x] LMNFT Monitoring Top Drops
+  - [x] Solana
+  - [ ] Polygon
+  - [ ] Ethereum
+  - [ ] Binance
+  - [ ] Aptos
+  - [ ] Avalanche
+  - [ ] Fantom
+  - [ ] Stacks
 - [x] OpenSea Monitoring
   - [x] Sales
   - [x] Listings
 - [x] Premint Monitoring
   - [x] Hype Weekly/Daily Raffles
+- [x] BRC20 Unisat
 
 ## Getting Started
 
