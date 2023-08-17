@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"github.com/charmbracelet/log"
 	"github.com/gagliardetto/solana-go"
+	"github.com/weeaa/nft/discord"
+	"github.com/weeaa/nft/handler"
+	"github.com/weeaa/nft/pkg/logger"
 	"math/big"
 	"net/http"
-	"nft/discord"
-	"nft/handler"
 	"time"
 )
 
 // ExchangeArt's base API used to monitor new FCFS releases.
 const baseURL = "https://api.exchange.art/v2/nfts/created?from=0&sort=listed-oldest&facetsType=collection&limit=10&profileId="
-
-const retryDelay = 2500
+const moduleName = "ExchangeArt"
+const DefaultRetryDelay = 2500
 
 // curated list of Artists we used to monitor.
 var (
@@ -34,7 +35,7 @@ var (
 	trevElViz    = "pGFZfmUNDGgSarDiI6MhBIOFymJ3"
 )
 
-var list = []string{
+var DefaultList = []string{
 	hyblinxx,
 	john,
 	adamApe,
@@ -50,47 +51,52 @@ var list = []string{
 	trevElViz,
 }
 
-func Monitor(discordWebhook string, artists []string, monitor1Spl bool) {
+// Monitor monitors newest releases of an artist.
+func Monitor(client discord.Client, artists []string, monitor1Spl bool, retryDelay time.Duration) {
 
 	log.Info("ExchangeArt Monitor Started")
 
 	h := handler.New()
 
-	for {
-		for _, artistURL := range artists {
-			t := discord.ExchangeArtWebhook{}
+	defer func() {
+		if r := recover(); r != nil {
+			Monitor(client, artists, monitor1Spl, retryDelay)
+			return
+		}
+	}()
 
-			resp, err := http.Get(baseURL + artistURL)
-			if err != nil {
-				log.Errorf("exchangeArt.Monitor: ERROR Client [%w]", err)
-				time.Sleep(retryDelay * time.Millisecond)
-				continue
-			}
+	for _, artistURL := range artists {
+		go func(artistUrl string) {
+			for {
+				ea := discord.ExchangeArtWebhook{}
 
-			if resp.StatusCode != 200 {
-				log.Error("exchangeArt.Monitor: Invalid Response Code", "respStatus", resp.Status)
-				time.Sleep(retryDelay * time.Millisecond)
-				continue
-			}
+				resp, err := http.Get(baseURL + artistUrl)
+				if err != nil {
+					log.Errorf("exchangeArt.Monitor: ERROR Client [%w]", err)
+					time.Sleep(retryDelay * time.Millisecond)
+					continue
+				}
 
-			res := ResponseExchangeArt{}
-			err = json.NewDecoder(resp.Body).Decode(&res)
-			if err != nil {
-				log.Error(err)
-				continue
-			}
+				if resp.StatusCode != 200 {
+					log.Error("exchangeArt.Monitor: Invalid Response Code", "respStatus", resp.Status)
+					time.Sleep(retryDelay * time.Millisecond)
+					continue
+				}
 
-			err = resp.Body.Close()
-			if err != nil {
-				log.Error(err)
-				continue
-			}
+				res := ResponseExchangeArt{}
+				err = json.NewDecoder(resp.Body).Decode(&res)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
 
-			for i := 0; i < len(res.ContractGroups); i++ {
+				err = resp.Body.Close()
+				if err != nil {
+					log.Error(err)
+					continue
+				}
 
-				// if secondary market (resale) it will keep looping as we only wanted FCFS releases
-				// if primary sale happened we don't want to be notified neither
-				if res.ContractGroups[i].Mint.Market == "secondary" || res.ContractGroups[i].Mint.MetadataAccount.PrimarySaleHappened {
+				if res.ContractGroups[0].Mint.Market == "secondary" || res.ContractGroups[0].Mint.MetadataAccount.PrimarySaleHappened {
 					continue
 				}
 
@@ -100,28 +106,15 @@ func Monitor(discordWebhook string, artists []string, monitor1Spl bool) {
 							SaleType := res.ContractGroups[0].AvailableContracts.EditionSales[j].Data.SaleType
 							switch SaleType {
 							case "OpenEdition":
-								t.ReleaseType = "Open Supply"
+								ea.ReleaseType = "Open Supply"
 							case "LimitedEdition":
-								t.ReleaseType = "Limited Supply"
+								ea.ReleaseType = "Limited Supply"
 							default:
-								t.ReleaseType = "Unknown Release Type"
+								ea.ReleaseType = "Unknown Release Type"
 							}
 						}
 					}
 				}
-
-				/*
-					currentTime := time.Now().Unix()
-					for j := 0; j < len(jsonParser.ContractGroups[0].AvailableContracts.EditionSales); j++ {
-						for k := 0; k < len(strconv.Itoa(jsonParser.ContractGroups[0].AvailableContracts.EditionSales[j].Data.Start)); k++ {
-							if int(currentTime) > jsonParser.ContractGroups[0].AvailableContracts.EditionSales[j].Data.Start {
-								break
-							} else {
-								t.LiveAt = "<t:" + strconv.Itoa(jsonParser.ContractGroups[0].AvailableContracts.EditionSales[j].Data.Start) + ">"
-							}
-						}
-					}
-				*/
 
 				var price uint64
 				for j := 0; j < len(res.ContractGroups[0].AvailableContracts.EditionSales); j++ {
@@ -131,49 +124,89 @@ func Monitor(discordWebhook string, artists []string, monitor1Spl bool) {
 				// converts Lamports to human readable amount in SOL.
 				var lptsOnAccount = new(big.Float).SetUint64(price)
 				var solBalance = new(big.Float).Quo(lptsOnAccount, new(big.Float).SetUint64(solana.LAMPORTS_PER_SOL))
-				t.Price = solBalance.Text('f', 10)
+				ea.Price = solBalance.Text('f', 10)
 
-				t.Name = res.ContractGroups[0].Mint.Name
-				t.Description = res.ContractGroups[0].Mint.Description
-				t.Image = res.ContractGroups[0].Mint.Image
-				t.Artist = res.ContractGroups[0].Mint.Brand.Name
-				t.CMID = res.ContractGroups[0].Mint.ID
-				t.Supply = fmt.Sprint(res.ContractGroups[0].Mint.MasterEditionAccount.MaxSupply)
-				t.Minted = res.ContractGroups[0].Mint.MasterEditionAccount.CurrentSupply
+				ea.Name = res.ContractGroups[0].Mint.Name
+				ea.Description = res.ContractGroups[0].Mint.Description
+				ea.Image = res.ContractGroups[0].Mint.Image
+				ea.Artist = res.ContractGroups[0].Mint.Brand.Name
+				ea.CMID = res.ContractGroups[0].Mint.ID
+				ea.Supply = fmt.Sprint(res.ContractGroups[0].Mint.MasterEditionAccount.MaxSupply)
+				ea.Minted = res.ContractGroups[0].Mint.MasterEditionAccount.CurrentSupply
 
-				t.Edition = len(res.ContractGroups[0].AvailableContracts.EditionSales)
-				if t.Edition == 0 { // isOnly 1 supply, we don't want that.
+				ea.ToSend = false
+				ea.Edition = len(res.ContractGroups[0].AvailableContracts.EditionSales)
+				if ea.Edition == 0 {
 					if monitor1Spl {
-						t.ToSend = true
-						t.MintLink = "https://exchange.art/single/" + t.CMID
-					} else {
-						t.ToSend = false
+						ea.ToSend = true
+						ea.MintLink = "https://exchange.art/single/" + ea.CMID
 					}
 				} else {
-					t.MintCap = res.ContractGroups[0].AvailableContracts.EditionSales[0].Data.WalletMintingCap
-					t.MintLink = "https://exchange.art/editions/" + t.CMID
-					t.ToSend = true
+					ea.MintCap = res.ContractGroups[0].AvailableContracts.EditionSales[0].Data.WalletMintingCap
+					ea.MintLink = "https://exchange.art/editions/" + ea.CMID
+					ea.ToSend = true
 				}
 
-			}
+				h.M.Set(ea.Name, ea.Name)
+				if h.M.Get(ea.Name) == h.MCopy.Get(ea.Name) {
+					continue
+				}
 
-			h.M[t.Name] = t.Name
-			if h.M[t.Name] == h.MCopy[t.Name] {
-				h.MCopy[t.Name] = h.M[t.Name]
-				continue
-			}
+				h.M.ForEach(func(k string, v interface{}) {
+					h.MCopy.Set(k, v)
+				})
 
-			for k, v := range h.M {
-				h.MCopy[k] = v
-			}
-
-			if t.ToSend {
-				log.Info("Release Found", "artist", t.Artist)
-				err = t.ExchangeArtNotification(discordWebhook)
-				if err != nil {
-					log.Error(err)
+				if ea.ToSend {
+					log.Info("Release Found", "artist", ea.Artist, "collection", ea.Name)
+					if err = client.ExchangeArtNotification(discord.Webhook{
+						Username:  "ExchangeArt",
+						AvatarUrl: client.AvatarImage,
+						Embeds: []discord.Embed{
+							{
+								Title:       ea.Name,
+								Description: ea.Description,
+								Thumbnail: discord.EmbedThumbnail{
+									Url: ea.Image,
+								},
+								Color:     client.Color,
+								Timestamp: discord.GetTimestamp(),
+								Footer: discord.EmbedFooter{
+									Text:    client.FooterText,
+									IconUrl: client.FooterImage,
+								},
+								Fields: []discord.EmbedFields{
+									{
+										Name:   "Supply/Max(wallet)",
+										Value:  fmt.Sprintf("`%s/%d`", ea.Supply, ea.MintCap),
+										Inline: true,
+									},
+									{
+										Name:   "Release Type",
+										Value:  ea.ReleaseType,
+										Inline: true,
+									},
+									{
+										Name:   "Artist",
+										Value:  ea.Artist,
+										Inline: true,
+									},
+									{
+										Name:   "Price",
+										Value:  fmt.Sprintf("%s", ea.Price[0:4]),
+										Inline: true,
+									},
+									{
+										Name:   "CandyMachine ID",
+										Value:  fmt.Sprintf("`%s`", ea.CMID),
+										Inline: false,
+									}},
+							},
+						},
+					}); err != nil {
+						logger.LogError(moduleName, err)
+					}
 				}
 			}
-		}
+		}(artistURL)
 	}
 }

@@ -4,12 +4,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/weeaa/nft/modules/lmnft"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-// Push sends a Discord Embed
+func NewClient() *Client {
+	return &Client{}
+}
+
+// Push sends a Discord Embed.
 func Push(data []byte, webhookURL string) error {
 	var resp *http.Response
 	var err error
@@ -46,61 +51,51 @@ func Push(data []byte, webhookURL string) error {
 	}
 }
 
-func (w *ExchangeArtWebhook) ExchangeArtNotification(webhookURL string) error {
-	content := Webhook{
-		Username:  "ExchangeArt",
-		AvatarUrl: weeaaImage,
-		Embeds: []Embed{
-			{
-				Title:       w.Name,
-				Description: w.Description,
-				Thumbnail: EmbedThumbnail{
-					Url: w.Image,
-				},
-				Color:     0xffffff,
-				Timestamp: getTimestamp(),
-				Footer: EmbedFooter{
-					Text:    weeaaFooterText,
-					IconUrl: weeaaImage,
-				},
-				Fields: []EmbedFields{{
-					Name:   "Supply/Max(wallet)",
-					Value:  fmt.Sprintf("`%s/%d`", w.Supply, w.MintCap),
-					Inline: true,
-				},
-					{
-						Name:   "Release Type",
-						Value:  w.ReleaseType,
-						Inline: true,
-					},
-					{
-						Name:   "Artist",
-						Value:  w.Artist,
-						Inline: true,
-					},
-					{
-						Name:   "Price",
-						Value:  fmt.Sprintf("%s", w.Price[0:4]),
-						Inline: true,
-					},
-					{
-						Name:   "CandyMachine ID",
-						Value:  fmt.Sprintf("`%s`", w.CMID),
-						Inline: false,
-					}},
-			},
-		},
-	}
+func (c *Client) ExchangeArtNotification(content Webhook) error {
 
 	jsonData, err := json.Marshal(content)
 	if err != nil {
 		return err
 	}
 
-	err = Push(jsonData, webhookURL)
+	err = Push(jsonData, c.ExchangeArtWebhook)
 	return err
 }
 
-func getTimestamp() string {
+func (c *Client) PremintNotification(content Webhook) error {
+
+	jsonData, err := json.Marshal(content)
+	if err != nil {
+		return err
+	}
+
+	err = Push(jsonData, c.PremintWebhook)
+	return err
+}
+
+func (c *Client) EtherscanNotification(content Webhook) error {
+
+	jsonData, err := json.Marshal(content)
+	if err != nil {
+		return err
+	}
+
+	err = Push(jsonData, c.PremintWebhook)
+	return err
+}
+
+func (c *Client) LaunchMyNFTNotification(lmnft *lmnft.Webhook) error {
+	content := Webhook{}
+
+	jsonData, err := json.Marshal(content)
+	if err != nil {
+		return err
+	}
+
+	err = Push(jsonData, c.PremintWebhook)
+	return err
+}
+
+func GetTimestamp() string {
 	return time.Now().UTC().Format("2006-01-02T15:04:05-0700")
 }

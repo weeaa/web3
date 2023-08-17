@@ -1,13 +1,17 @@
 package handler
 
+import (
+	"github.com/weeaa/nft/pkg/safemap"
+)
+
 type Handler struct {
-	M     map[string]interface{}
-	MCopy map[string]interface{}
+	M     *safemap.SafeMap[string, interface{}]
+	MCopy *safemap.SafeMap[string, interface{}]
 }
 
 func New() *Handler {
 	return &Handler{
-		M:     make(map[string]interface{}),
-		MCopy: make(map[string]interface{}),
+		M:     safemap.New[string, interface{}](),
+		MCopy: safemap.New[string, interface{}](),
 	}
 }

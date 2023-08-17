@@ -1,7 +1,21 @@
 package discord
 
-const weeaaImage = "https://images-ext-2.discordapp.net/external/VeKohQ7LpG4m2Xubc8m1Um7-32RVIsEJSBqB9OAA9kA/%3Fsize%3D4096/https/cdn.discordapp.com/avatars/363975551393988620/3153e87ecb026728055a7e61433c2594.png?width=1132&height=1132"
-const weeaaFooterText = "@weeaa – 🦦"
+import (
+	"github.com/PuerkitoBio/goquery"
+)
+
+type Site string
+
+type Client struct {
+	AvatarImage        string
+	FooterImage        string
+	FooterText         string
+	Color              int
+	BRC20MintsWebhook  string
+	LaunchMyNFTWebhook string
+	ExchangeArtWebhook string
+	PremintWebhook     string
+}
 
 type ExchangeArtWebhook struct {
 	Name        string
@@ -19,6 +33,69 @@ type ExchangeArtWebhook struct {
 	Price       string
 	LiveAt      string
 	ToSend      bool
+}
+
+type BRC20MintsWebhook struct {
+	Name             string
+	Supply           string
+	HoldersCount     string
+	MintLimit        string
+	TotalMinted      string
+	MintLink         string
+	PercentageMinted string
+	MintTimes        string
+	Links            string
+	Creator          string
+	Block            string
+	Holders          map[int]map[string]string
+	Fees             string
+	Timestamp        string
+	BlockDeploy      string
+}
+
+type PremintWebhook struct {
+	document *goquery.Document
+
+	Title        string
+	URL          string
+	Image        string
+	Desc         string
+	Price        string
+	BalanceFall  string
+	ETHtoHold    string
+	TimeClose    string
+	WinnerAmount string
+	Status       string
+	StatusImg    string
+
+	Twitter TwitterReqs
+	Discord DiscordReqs
+	Misc    MiscReqs
+	Custom  Custom
+}
+
+type TwitterReqs struct {
+	Total   string
+	Account string
+	Tweet   string
+}
+
+type DiscordReqs struct {
+	Total  string
+	Server string
+	Role   string
+}
+
+type MiscReqs struct {
+	Total          string
+	Spots          string
+	OverAllocating string
+	RegOut         string
+	LinkOut        string
+}
+
+type Custom struct {
+	Total string
 }
 
 /*🍀 DISCORD TYPES 🍀*/
