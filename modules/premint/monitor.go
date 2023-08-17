@@ -157,7 +157,9 @@ func (p *Profile) do(URL string) error {
 			return err
 		}
 
-		resp.Body.Close()
+		if err = resp.Body.Close(); err != nil {
+			continue
+		}
 
 		if resp.StatusCode != 200 {
 			if resp.StatusCode == 429 {
