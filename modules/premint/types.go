@@ -7,8 +7,6 @@ import (
 	"github.com/weeaa/nft/handler"
 )
 
-const moduleName = "Premint.xyz"
-
 type RaffleType string
 
 /* you need to hold a Premint NFT in order to access those eps */

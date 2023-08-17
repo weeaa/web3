@@ -13,9 +13,10 @@ import (
 	"time"
 )
 
+const moduleName = "ExchangeArt"
+
 // ExchangeArt's base API used to monitor new FCFS releases.
 const baseURL = "https://api.exchange.art/v2/nfts/created?from=0&sort=listed-oldest&facetsType=collection&limit=10&profileId="
-const moduleName = "ExchangeArt"
 const DefaultRetryDelay = 2500
 
 // curated list of Artists we used to monitor.
@@ -54,7 +55,7 @@ var DefaultList = []string{
 // Monitor monitors newest releases of an artist.
 func Monitor(client discord.Client, artists []string, monitor1Spl bool, retryDelay time.Duration) {
 
-	log.Info("ExchangeArt Monitor Started")
+	logger.LogStartup(moduleName)
 
 	h := handler.New()
 
@@ -72,7 +73,7 @@ func Monitor(client discord.Client, artists []string, monitor1Spl bool, retryDel
 
 				resp, err := http.Get(baseURL + artistUrl)
 				if err != nil {
-					log.Errorf("exchangeArt.Monitor: ERROR Client [%w]", err)
+					//log.Errorf("exchangeArt.Monitor: ERROR Client [%w]", err)
 					time.Sleep(retryDelay * time.Millisecond)
 					continue
 				}

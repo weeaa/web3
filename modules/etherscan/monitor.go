@@ -1,9 +1,9 @@
 package etherscan
 
 import (
+	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/charmbracelet/log"
 	"github.com/weeaa/nft/discord"
 	"github.com/weeaa/nft/handler"
 	"github.com/weeaa/nft/pkg/logger"
@@ -16,12 +16,30 @@ import (
 
 const moduleName = "Etherscan Verified Contracts"
 
+// remain unchanged if you do not want to get 403.
+const (
+	retryDelay = 3000
+)
+
+type Contract struct {
+	Address string
+	Name    string
+	Link    string
+}
+
 func Monitor(client discord.Client) {
 
 	logger.LogStartup(moduleName)
 
 	h := handler.New()
-	e := &Webhook{}
+	e := &Contract{}
+
+	defer func() {
+		if r := recover(); r != nil {
+			Monitor(client)
+			return
+		}
+	}()
 
 	go func() {
 		for {
@@ -48,26 +66,27 @@ func Monitor(client discord.Client) {
 
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
-				log.Error("etherscan.Monitor: Client ERR When Performing Request", "error", err)
 				continue
 			}
 
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				log.Error("etherscan.Monitor: Unable to Read Body", "error", err)
+				logger.LogError(moduleName, err)
 				continue
 			}
 
-			resp.Body.Close()
+			if err = resp.Body.Close(); err != nil {
+				continue
+			}
 
 			if resp.StatusCode != 200 {
-				log.Error("etherscan.Monitor: Invalid Response Code", "respStatus", resp.Status)
+				logger.LogError(moduleName, fmt.Errorf("invalid response code: %s", resp.Status))
 				continue
 			}
 
 			document, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
 			if err != nil {
-				log.Error("etherscan.Monitor: Unable to Read Body Document", "error", err)
+				logger.LogError(moduleName, errors.New("unable to read body document"))
 				continue
 			}
 
@@ -82,38 +101,39 @@ func Monitor(client discord.Client) {
 				continue
 			}
 
-			if err = client.EtherscanNotification(discord.Webhook{
-				Content:   "",
-				Username:  "ETH Verified Contract",
-				AvatarUrl: "https://media.discordapp.net/attachments/1025845688900259980/1026979346046525520/ARCANA_LOGO_ICON_BG_BLACK_-_AQUA.png?width=1318&height=1318",
-				Embeds: []discord.Embed{
-					{
-						Title:       e.Name,
-						Description: "",
-						Url:         e.Link,
-						Timestamp:   discord.GetTimestamp(),
-						Color:       client.Color,
-						Footer: discord.EmbedFooter{
-							Text: "ETH Verified Contract — Arcana",
-						},
-
-						Fields: []discord.EmbedFields{
-							{
-								Name:   "Contract Address",
-								Value:  "`" + e.Address + "`",
-								Inline: true,
+			go func() {
+				if err = client.EtherscanNotification(discord.Webhook{
+					Username:  "ETH Verified Contract",
+					AvatarUrl: client.AvatarImage,
+					Embeds: []discord.Embed{
+						{
+							Title:     e.Name,
+							Url:       e.Link,
+							Timestamp: discord.GetTimestamp(),
+							Color:     client.Color,
+							Footer: discord.EmbedFooter{
+								Text:    client.FooterText,
+								IconUrl: client.FooterImage,
 							},
-							{
-								Name:   "Write Contract | Code",
-								Value:  "[Contract](https://etherscan.io/address/" + e.Address + "#writeContract) | [Contract](https://etherscan.io/address/" + e.Address + "#code)",
-								Inline: true,
+
+							Fields: []discord.EmbedFields{
+								{
+									Name:   "Contract Address",
+									Value:  "`" + e.Address + "`",
+									Inline: true,
+								},
+								{
+									Name:   "Write Contract | Code",
+									Value:  "[Contract](https://etherscan.io/address/" + e.Address + "#writeContract) | [Contract](https://etherscan.io/address/" + e.Address + "#code)",
+									Inline: true,
+								},
 							},
 						},
 					},
-				},
-			}); err != nil {
-				logger.LogError(moduleName, fmt.Errorf("unable to Send Discord Webhook: %w", err))
-			}
+				}); err != nil {
+					logger.LogError(moduleName, fmt.Errorf("unable to Send discord webhook: %w", err))
+				}
+			}()
 
 			h.M.ForEach(func(k string, v interface{}) {
 				h.MCopy.Set(k, v)

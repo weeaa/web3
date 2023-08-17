@@ -16,15 +16,26 @@ import (
 	"time"
 )
 
+const moduleName = "premint.xyz"
+
 var maxRetriesReached = errors.New("maximum retries reached, aborting function")
 
 func (p *Profile) Monitor(client discord.Client, raffleTypes []RaffleType) {
+
+	logger.LogStartup(moduleName)
 
 	p.DiscordClient = client
 	if err := p.login(); err != nil {
 		logger.LogError(moduleName, err)
 		return
 	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			p.Monitor(client, raffleTypes)
+			return
+		}
+	}()
 
 	go func() {
 		for {

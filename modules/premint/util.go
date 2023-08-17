@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-var RateLimited = errors.New("premint.login: you are rate limited :( you got to wait till you're unbanned, which is approx 5+ minutes")
+var RateLimited = errors.New("you are rate limited :( you got to wait till you're unbanned, which is approx 5+ minutes")
 
 func NewProfile(publicAddress, privateKey, proxy string, retryDelay int) *Profile {
 	var client tls_client.HttpClient
@@ -114,10 +114,12 @@ func (p *Profile) login() error {
 			if resp.StatusCode == 429 {
 				return RateLimited
 			}
-			return fmt.Errorf("premint.login: Unexpected Response Status: %s", resp.Status)
+			return fmt.Errorf("invalid response status: %s", resp.Status)
 		}
 
-		resp.Body.Close()
+		if err = resp.Body.Close(); err != nil {
+			continue
+		}
 
 		privateKey, err := crypto.HexToECDSA(p.privateKey)
 		if err != nil {
@@ -166,7 +168,7 @@ func (p *Profile) login() error {
 			if resp.StatusCode == 429 {
 				return RateLimited
 			}
-			return fmt.Errorf("premint.login: unexpected response status: %s", resp.Status)
+			return fmt.Errorf("invalid response status: %s", resp.Status)
 		}
 
 		cookieSess := resp.Cookies()
@@ -216,7 +218,7 @@ func (p *Profile) getNonce() error {
 		if resp.StatusCode == 429 {
 			return RateLimited
 		}
-		return fmt.Errorf("premint.login.getNonce: Unexpected Response Status: %s", resp.Status)
+		return fmt.Errorf("invalid response status: %s", resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -235,7 +237,7 @@ func (p *Profile) getNonce() error {
 		p.nonce = nr.Nonce
 		return nil
 	} else {
-		return errors.New("premint.login.getNonce: Unable to Get Nonce")
+		return errors.New("unable to get nonce")
 	}
 }
 

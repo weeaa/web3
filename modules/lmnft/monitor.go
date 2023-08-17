@@ -33,6 +33,13 @@ func Monitor(client discord.Client, networks []Network, delay time.Duration) {
 	var buf bytes.Buffer
 	var filterByQuery string
 
+	defer func() {
+		if r := recover(); r != nil {
+			Monitor(client, networks, delay)
+			return
+		}
+	}()
+
 	if len(networks) > 0 {
 		var filterByNetworks []string
 		for _, network := range networks {
