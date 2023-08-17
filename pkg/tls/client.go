@@ -26,6 +26,7 @@ func NewProxyLess() tls_client.HttpClient {
 	ckJar := tls_client.NewCookieJar(nil)
 	client, err := tls_client.NewHttpClient(tls_client.NewNoopLogger(),
 		tls_client.WithClientProfile(tls_client.Chrome_112),
+		tls_client.WithTimeoutSeconds(tls_client.DefaultTimeoutSeconds),
 		tls_client.WithTimeoutSeconds(10),
 		tls_client.WithCookieJar(ckJar),
 		tls_client.WithNotFollowRedirects(),
