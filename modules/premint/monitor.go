@@ -154,7 +154,7 @@ func (p *Profile) do(URL string) error {
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return err
+			continue
 		}
 
 		if err = resp.Body.Close(); err != nil {
@@ -169,13 +169,13 @@ func (p *Profile) do(URL string) error {
 			if retries >= 5 {
 				return maxRetriesReached
 			}
-			logger.LogError(moduleName, fmt.Errorf("[%v] Fetching Premint Raffle > %v", resp.Status, URL))
+			logger.LogError(moduleName, fmt.Errorf("[%s] Fetching Raffle [%s]", resp.Status, URL))
 			continue
 		}
 
 		task.document, err = goquery.NewDocumentFromReader(strings.NewReader(string(body)))
 		if err != nil {
-			return err
+			continue
 		}
 
 		if err = task.checkClosed(); err != nil {

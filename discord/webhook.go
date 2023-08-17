@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/weeaa/nft/modules/lmnft"
 	"net/http"
 	"strconv"
 	"time"
@@ -84,8 +83,7 @@ func (c *Client) EtherscanNotification(content Webhook) error {
 	return err
 }
 
-func (c *Client) LaunchMyNFTNotification(lmnft *lmnft.Webhook) error {
-	content := Webhook{}
+func (c *Client) LaunchMyNFTNotification(content Webhook) error {
 
 	jsonData, err := json.Marshal(content)
 	if err != nil {
@@ -98,4 +96,8 @@ func (c *Client) LaunchMyNFTNotification(lmnft *lmnft.Webhook) error {
 
 func GetTimestamp() string {
 	return time.Now().UTC().Format("2006-01-02T15:04:05-0700")
+}
+
+func (c *Client) CheckIfNil(webhook string) bool {
+	return len(webhook) < 20
 }

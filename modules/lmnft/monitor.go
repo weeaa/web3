@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -104,7 +105,7 @@ func Monitor(client discord.Client, networks []Network, delay time.Duration) {
 	}
 
 	if err := json.NewEncoder(&buf).Encode(payload); err != nil {
-		logger.LogError("", err)
+		logger.LogError(moduleName, err)
 	}
 
 	go func() {
@@ -120,24 +121,17 @@ func Monitor(client discord.Client, networks []Network, delay time.Duration) {
 
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
-				log.Error(err)
-				time.Sleep(retryDelay)
 				continue
 			}
 
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				log.Error(err)
-				time.Sleep(retryDelay)
-				return
+				continue
 			}
 
 			var res resLaunchMyNFT
-			err = json.NewDecoder(bytes.NewBuffer(body)).Decode(&res)
-			if err != nil {
-				log.Error(err)
-				time.Sleep(retryDelay)
-				return
+			if err = json.NewDecoder(bytes.NewBuffer(body)).Decode(&res); err != nil {
+				continue
 			}
 
 			for i := 0; i < len(res.Results); i++ {
@@ -171,6 +165,7 @@ func Monitor(client discord.Client, networks []Network, delay time.Duration) {
 				case string(Stacks):
 				default:
 					logger.LogError(moduleName, errors.New("unknown network"))
+					continue
 				}
 
 				h.M.Set(t.Name, t.TotalMinted)
@@ -181,7 +176,59 @@ func Monitor(client discord.Client, networks []Network, delay time.Duration) {
 				}
 
 				if t.Fraction >= 6 && t.TotalMinted >= 100 && t.CMID != "" {
-					if err = client.LaunchMyNFTNotification(t); err != nil {
+					if err = client.LaunchMyNFTNotification(discord.Webhook{
+						Username:  "LaunchMyNFT",
+						AvatarUrl: client.AvatarImage,
+						Embeds: []discord.Embed{
+							{
+								Title:       t.Name,
+								Description: t.Description,
+								Url:         t.MintLink,
+								Timestamp:   discord.GetTimestamp(),
+								Color:       client.Color,
+								Footer: discord.EmbedFooter{
+									Text:    client.FooterText,
+									IconUrl: client.FooterImage,
+								},
+								Thumbnail: discord.EmbedThumbnail{
+									Url: t.Image,
+								},
+								Fields: []discord.EmbedFields{
+
+									{
+										Name:   "Price",
+										Value:  fmt.Sprintf("%.2f SOL", t.Cost),
+										Inline: true,
+									},
+									{
+										Name:   "Supply",
+										Value:  "`" + strconv.Itoa(t.TotalMinted) + "/" + strconv.Itoa(t.Supply) + fmt.Sprintf(" — %.2f%%`", t.Fraction),
+										Inline: true,
+									},
+									{
+										Name:   "CandyMachine ID",
+										Value:  "`" + t.CMID + "`",
+										Inline: false,
+									},
+									{
+										Name:   "Twitter",
+										Value:  t.Twitter,
+										Inline: true,
+									},
+									{
+										Name:   "Discord",
+										Value:  t.Discord,
+										Inline: true,
+									},
+									{
+										Name:   "Hyperspace",
+										Value:  "[Secondary Market]" + "(" + t.Secondary + ")",
+										Inline: true,
+									},
+								},
+							},
+						},
+					}); err != nil {
 						logger.LogError(moduleName, err)
 					}
 

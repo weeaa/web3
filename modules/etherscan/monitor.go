@@ -101,39 +101,37 @@ func Monitor(client discord.Client) {
 				continue
 			}
 
-			go func() {
-				if err = client.EtherscanNotification(discord.Webhook{
-					Username:  "ETH Verified Contract",
-					AvatarUrl: client.AvatarImage,
-					Embeds: []discord.Embed{
-						{
-							Title:     e.Name,
-							Url:       e.Link,
-							Timestamp: discord.GetTimestamp(),
-							Color:     client.Color,
-							Footer: discord.EmbedFooter{
-								Text:    client.FooterText,
-								IconUrl: client.FooterImage,
-							},
+			if err = client.EtherscanNotification(discord.Webhook{
+				Username:  "ETH Verified Contract",
+				AvatarUrl: client.AvatarImage,
+				Embeds: []discord.Embed{
+					{
+						Title:     e.Name,
+						Url:       e.Link,
+						Timestamp: discord.GetTimestamp(),
+						Color:     client.Color,
+						Footer: discord.EmbedFooter{
+							Text:    client.FooterText,
+							IconUrl: client.FooterImage,
+						},
 
-							Fields: []discord.EmbedFields{
-								{
-									Name:   "Contract Address",
-									Value:  "`" + e.Address + "`",
-									Inline: true,
-								},
-								{
-									Name:   "Write Contract | Code",
-									Value:  "[Contract](https://etherscan.io/address/" + e.Address + "#writeContract) | [Contract](https://etherscan.io/address/" + e.Address + "#code)",
-									Inline: true,
-								},
+						Fields: []discord.EmbedFields{
+							{
+								Name:   "Contract Address",
+								Value:  "`" + e.Address + "`",
+								Inline: true,
+							},
+							{
+								Name:   "Write Contract | Code",
+								Value:  "[Contract](https://etherscan.io/address/" + e.Address + "#writeContract) | [Contract](https://etherscan.io/address/" + e.Address + "#code)",
+								Inline: true,
 							},
 						},
 					},
-				}); err != nil {
-					logger.LogError(moduleName, fmt.Errorf("unable to Send discord webhook: %w", err))
-				}
-			}()
+				},
+			}); err != nil {
+				logger.LogError(moduleName, fmt.Errorf("unable to Send discord webhook: %w", err))
+			}
 
 			h.M.ForEach(func(k string, v interface{}) {
 				h.MCopy.Set(k, v)
