@@ -4,6 +4,13 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+type Module string
+
+// todo: add all modules supported
+var (
+	Premint Module = "premint.xyz"
+)
+
 type Site string
 
 type Client struct {

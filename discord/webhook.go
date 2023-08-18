@@ -50,6 +50,10 @@ func Push(data []byte, webhookURL string) error {
 	}
 }
 
+func (c *Client) Handler() {
+
+}
+
 func (c *Client) ExchangeArtNotification(content Webhook) error {
 
 	jsonData, err := json.Marshal(content)

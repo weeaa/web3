@@ -26,6 +26,7 @@ require (
 	github.com/dfuse-io/logging v0.0.0-20201110202154-26697de88c79 // indirect
 	github.com/ethereum/go-ethereum v1.12.2 // indirect
 	github.com/fatih/color v1.9.0 // indirect
+	github.com/foundVanting/opensea-stream-go v0.1.9 // indirect
 	github.com/gagliardetto/binary v0.7.7 // indirect
 	github.com/gagliardetto/treeout v0.1.4 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
