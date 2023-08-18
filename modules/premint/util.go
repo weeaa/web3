@@ -63,6 +63,7 @@ func (p *Profile) login() error {
 			if resp.StatusCode == 429 {
 				return RateLimited
 			}
+			return fmt.Errorf("invalid response status: %s", resp.Status)
 		}
 
 		cookies := resp.Cookies()
@@ -231,7 +232,9 @@ func (p *Profile) getNonce() error {
 		return err
 	}
 
-	resp.Body.Close()
+	if err = resp.Body.Close(); err != nil {
+		return err
+	}
 
 	if nr.Success {
 		p.nonce = nr.Nonce

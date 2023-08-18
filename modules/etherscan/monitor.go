@@ -1,7 +1,6 @@
 package etherscan
 
 import (
-	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/weeaa/nft/discord"
@@ -85,7 +84,6 @@ func Monitor(client discord.Client) {
 
 			document, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
 			if err != nil {
-				logger.LogError(moduleName, errors.New("unable to read body document"))
 				continue
 			}
 
