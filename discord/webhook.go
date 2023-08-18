@@ -50,8 +50,30 @@ func Push(data []byte, webhookURL string) error {
 	}
 }
 
-func (c *Client) Handler() {
+// todo propagate this function to all modules
+func (c *Client) Handler(content Webhook, module Module) error {
+	var webhook string
 
+	jsonData, err := json.Marshal(content)
+	if err != nil {
+		return err
+	}
+
+	switch module {
+	case Premint:
+		webhook = c.PremintWebhook
+	case ExchangeArt:
+		webhook = c.ExchangeArtWebhook
+	case OpenSea:
+		//todo add support
+	case LaunchMyNFT:
+		webhook = c.LaunchMyNFTWebhook
+	case Etherscan:
+		webhook = c.EtherscanWebhook
+	}
+
+	err = Push(jsonData, webhook)
+	return err
 }
 
 func (c *Client) ExchangeArtNotification(content Webhook) error {

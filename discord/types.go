@@ -8,7 +8,12 @@ type Module string
 
 // todo: add all modules supported
 var (
-	Premint Module = "premint.xyz"
+	Premint     Module = "premint.xyz"
+	Etherscan   Module = "etherscan"
+	ExchangeArt Module = "exchangeArt"
+	LaunchMyNFT Module = "lmnft"
+	OpenSea     Module = "opensea"
+	Ethereum    Module = "ethereum"
 )
 
 type Site string
@@ -22,6 +27,7 @@ type Client struct {
 	LaunchMyNFTWebhook string
 	ExchangeArtWebhook string
 	PremintWebhook     string
+	EtherscanWebhook   string
 }
 
 type ExchangeArtWebhook struct {
