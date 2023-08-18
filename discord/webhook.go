@@ -45,7 +45,7 @@ func Push(data []byte, webhookURL string) error {
 			}
 
 		default:
-			return fmt.Errorf("ERROR Push Discord Webhook invalid request %d [status exp. %s]", resp.StatusCode, "title")
+			return fmt.Errorf("push discord webhook invalid request: %s", resp.Status)
 		}
 	}
 }
