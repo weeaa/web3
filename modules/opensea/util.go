@@ -60,12 +60,8 @@ func (c *Client) GetFloor(collectionSlug string) (float64, error) {
 }
 
 func weiToEther(wei *big.Int) *big.Float {
-	f := new(big.Float)
-	f.SetPrec(236)
-	f.SetMode(big.ToNearestEven)
-	fWei := new(big.Float)
-	fWei.SetPrec(236)
-	fWei.SetMode(big.ToNearestEven)
+	f := new(big.Float).SetPrec(236).SetMode(big.ToNearestEven)
+	fWei := new(big.Float).SetPrec(236).SetMode(big.ToNearestEven)
 	return f.Quo(fWei.SetInt(wei), big.NewFloat(params.Ether))
 }
 
