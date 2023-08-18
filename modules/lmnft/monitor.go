@@ -181,7 +181,7 @@ func Monitor(client discord.Client, networks []Network, delay time.Duration) {
 				}
 
 				if t.Fraction >= 6 && t.TotalMinted >= 100 && t.CMID != "" {
-					if err = client.LaunchMyNFTNotification(discord.Webhook{
+					if err = client.SendNotification(discord.Webhook{
 						Username:  "LaunchMyNFT",
 						AvatarUrl: client.AvatarImage,
 						Embeds: []discord.Embed{
@@ -233,7 +233,7 @@ func Monitor(client discord.Client, networks []Network, delay time.Duration) {
 								},
 							},
 						},
-					}); err != nil {
+					}, discord.LaunchMyNFT); err != nil {
 						logger.LogError(moduleName, err)
 					}
 

@@ -51,7 +51,7 @@ func Push(data []byte, webhookURL string) error {
 }
 
 // todo propagate this function to all modules
-func (c *Client) Handler(content Webhook, module Module) error {
+func (c *Client) SendNotification(content Webhook, module Module) error {
 	var webhook string
 
 	jsonData, err := json.Marshal(content)

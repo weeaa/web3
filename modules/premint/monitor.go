@@ -178,8 +178,6 @@ func (p *Profile) do(URL string) error {
 			return err
 		}
 
-		//log.Printf("Fetching Premint Raffle [%s]", URL)
-
 		task.doAllTasks()
 
 		p.handler.M.Set(task.Title, URL)
@@ -191,7 +189,7 @@ func (p *Profile) do(URL string) error {
 		time.Sleep(2 * time.Second)
 
 		task.Slug = URL
-		if err = p.DiscordClient.PremintNotification(discord.Webhook{
+		if err = p.DiscordClient.SendNotification(discord.Webhook{
 			Username:  "Premint.xyz",
 			AvatarUrl: "https://pbs.twimg.com/profile_images/1505785782002339840/mgeaHOqx_400x400.jpg",
 			Embeds: []discord.Embed{
@@ -227,7 +225,7 @@ func (p *Profile) do(URL string) error {
 					},
 				},
 			},
-		}); err != nil {
+		}, discord.Premint); err != nil {
 			logger.LogError(moduleName, err)
 		}
 

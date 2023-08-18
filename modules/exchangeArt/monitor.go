@@ -158,7 +158,7 @@ func Monitor(client discord.Client, artists []string, monitor1Spl bool, retryDel
 
 				if ea.ToSend {
 					//log.Info("Release Found", "artist", ea.Artist, "collection", ea.Name)
-					if err = client.ExchangeArtNotification(discord.Webhook{
+					if err = client.SendNotification(discord.Webhook{
 						Username:  "ExchangeArt",
 						AvatarUrl: client.AvatarImage,
 						Embeds: []discord.Embed{
@@ -202,7 +202,7 @@ func Monitor(client discord.Client, artists []string, monitor1Spl bool, retryDel
 									}},
 							},
 						},
-					}); err != nil {
+					}, discord.ExchangeArt); err != nil {
 						logger.LogError(moduleName, err)
 					}
 				}

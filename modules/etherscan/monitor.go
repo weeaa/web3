@@ -13,10 +13,8 @@ import (
 	"time"
 )
 
-const moduleName = "Etherscan Verified Contracts"
-
-// remain unchanged if you do not want to get 403.
 const (
+	moduleName = "Etherscan Verified Contract"
 	retryDelay = 3000
 )
 
@@ -98,7 +96,7 @@ func Monitor(client discord.Client) {
 				continue
 			}
 
-			if err = client.EtherscanNotification(discord.Webhook{
+			if err = client.SendNotification(discord.Webhook{
 				Username:  "ETH Verified Contract",
 				AvatarUrl: client.AvatarImage,
 				Embeds: []discord.Embed{
@@ -126,7 +124,7 @@ func Monitor(client discord.Client) {
 						},
 					},
 				},
-			}); err != nil {
+			}, discord.Etherscan); err != nil {
 				logger.LogError(moduleName, fmt.Errorf("unable to Send discord webhook: %w", err))
 			}
 
