@@ -25,8 +25,8 @@ An NFT monitoring toolkit for tracking NFT drops, sales, listings, and more.
   - [x] Sales
   - [x] Listings
 - [x] Premint Monitoring
-  - [x] Hype Weekly/Daily Raffles
-- [x] BRC20 Unisat
+  - [x] Hype Weekly/Daily Raffles (Premint NFT Required)
+- [ ] BRC20 Unisat
 
 ## Getting Started
 
@@ -49,7 +49,27 @@ $ go get github.com/weeaa/nft
 
 ```go
 func main() {
+	
+	client := discord.NewClient(
+		os.Getenv("EXCHANGEART_WEBHOOK"),
+		os.Getenv("LMNFT_WEBHOOK"),
+		os.Getenv("PREMINT_WEBHOOK"),
+		os.Getenv("ETHERSCAN_WEBHOOK"),
+		os.Getenv("BRC20_WEBHOOK"),
+		"weeaa's monitor",
+		"https://image.png",
+		0xFFFFF,
+	)
+	
+	etherscan.Monitor(client)
+	exchangeArt.Monitor(client, exchangeArt.DefaultList, false, 1000)
+	lmnft.Monitor(client, []lmnft.Network{lmnft.Solana, lmnft.Binance}, 1000)
+	
+	profile := premint.NewProfile(os.Getenv("PREMINT_PUB"), os.Getenv("PREMINT_PRIV"), "", 5000)
+	profile.Monitor(client, []premint.RaffleType{premint.Daily, premint.Weekly})
 }
 ```
 
 ## Credits
+
+s/o **DALL-E** for the image 😸
