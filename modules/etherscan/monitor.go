@@ -69,18 +69,17 @@ func Monitor(client discord.Client) {
 				continue
 			}
 
+			if resp.StatusCode != 200 {
+				logger.LogError(moduleName, fmt.Errorf("invalid response status: %s", resp.Status))
+				continue
+			}
+
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				logger.LogError(moduleName, err)
 				continue
 			}
 
 			if err = resp.Body.Close(); err != nil {
-				continue
-			}
-
-			if resp.StatusCode != 200 {
-				logger.LogError(moduleName, fmt.Errorf("invalid response code: %s", resp.Status))
 				continue
 			}
 

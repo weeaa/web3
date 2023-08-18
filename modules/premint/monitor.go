@@ -48,7 +48,6 @@ func (p *Profile) Monitor(client discord.Client, raffleTypes []RaffleType) {
 			time.Sleep(time.Duration(p.RetryDelay) * time.Millisecond)
 		}
 	}()
-
 }
 
 func (p *Profile) fetchRaffles(raffleUrl string) error {
@@ -83,17 +82,17 @@ func (p *Profile) fetchRaffles(raffleUrl string) error {
 
 		resp, err := p.Client.Do(req)
 		if err != nil {
-			return err
+			continue
 		}
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return err
+			continue
 		}
 
 		doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
 		if err != nil {
-			return err
+			continue
 		}
 
 		var raffles map[string]string
@@ -106,13 +105,10 @@ func (p *Profile) fetchRaffles(raffleUrl string) error {
 		for _, Url := range filteredRafflesUrl {
 			if err = p.do(Url); err != nil {
 				logger.LogError(moduleName, err)
-				continue
 			}
 		}
-
 		continue
 	}
-
 }
 
 func (p *Profile) do(URL string) error {
@@ -169,7 +165,7 @@ func (p *Profile) do(URL string) error {
 			if retries >= 5 {
 				return maxRetriesReached
 			}
-			logger.LogError(moduleName, fmt.Errorf("[%s] Fetching Raffle [%s]", resp.Status, URL))
+			logger.LogError(moduleName, fmt.Errorf("[%s] Fetching Raffle %d/5 [%s]", resp.Status, retries, URL))
 			continue
 		}
 
@@ -182,10 +178,9 @@ func (p *Profile) do(URL string) error {
 			return err
 		}
 
-		log.Printf("Fetching Premint Raffle [%s]", URL)
+		//log.Printf("Fetching Premint Raffle [%s]", URL)
 
-		g, _ := errgroup.WithContext(context.Background())
-		task.doAllTasks(g)
+		task.doAllTasks()
 
 		p.handler.M.Set(task.Title, URL)
 
@@ -245,7 +240,8 @@ func (p *Profile) do(URL string) error {
 
 }
 
-func (t *Webhook) doAllTasks(g *errgroup.Group) {
+func (t *Webhook) doAllTasks() {
+	g, _ := errgroup.WithContext(context.Background())
 
 	g.Go(func() error {
 		t.getProjectInfo()
@@ -386,8 +382,8 @@ func (t *Webhook) getCustomInfo() {
 func (t *Webhook) getMiscInfo() {
 	if strings.Contains(t.document.Text(), "Have at least") {
 		t.document.Find("i[class]").Each(func(i int, s *goquery.Selection) {
-			if strings.Contains(s.Text(), "Have at least") {
-				log.Println(s.Text())
+			if strings.Contains(s.Text(), "Have at least") { //todo: needs a fix
+				//log.Println(s.Text())
 			}
 		})
 

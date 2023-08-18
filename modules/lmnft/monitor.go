@@ -124,6 +124,11 @@ func Monitor(client discord.Client, networks []Network, delay time.Duration) {
 				continue
 			}
 
+			if resp.StatusCode != 200 {
+				logger.LogError(moduleName, fmt.Errorf("invalid response status: %s", resp.Status))
+				continue
+			}
+
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				continue
@@ -232,9 +237,9 @@ func Monitor(client discord.Client, networks []Network, delay time.Duration) {
 						logger.LogError(moduleName, err)
 					}
 
-					log.Info("Collection Found!", "name", t.Name, "fraction", t.Fraction, "totalMinted", t.TotalMinted, "network", t.Network)
+					//log.Info("Collection Found!", "name", t.Name, "fraction", t.Fraction, "totalMinted", t.TotalMinted, "network", t.Network)
 				} else {
-					log.Warn("Collection 2 Low :(", "name", t.Name, "fraction", t.Fraction, "totalMinted", t.TotalMinted, "network", t.Network)
+					//log.Warn("Collection 2 Low :(", "name", t.Name, "fraction", t.Fraction, "totalMinted", t.TotalMinted, "network", t.Network)
 				}
 
 				h.M.ForEach(func(k string, v interface{}) {
@@ -270,12 +275,12 @@ func scrapeCMID(input string) (string, string, string) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Errorf("lmnft.ScrapeCMID: ERROR Reading Body Response [%w]", err)
-		return defaultVal, defaultVal, defaultVal
+
 	}
 
 	var res resSolana
 	switch resp.StatusCode {
+	case 200:
 	case 400:
 	default:
 		return defaultVal, defaultVal, defaultVal

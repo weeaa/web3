@@ -2,8 +2,8 @@ package exchangeArt
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/charmbracelet/log"
 	"github.com/gagliardetto/solana-go"
 	"github.com/weeaa/nft/discord"
 	"github.com/weeaa/nft/handler"
@@ -54,6 +54,10 @@ var DefaultList = []string{
 
 // Monitor monitors newest releases of an artist.
 func Monitor(client discord.Client, artists []string, monitor1Spl bool, retryDelay time.Duration) {
+	if client.CheckIfNil(client.ExchangeArtWebhook) {
+		logger.LogError(moduleName, errors.New("invalid/empty webhook – monitor stopped"))
+		return
+	}
 
 	logger.LogStartup(moduleName)
 
@@ -73,27 +77,22 @@ func Monitor(client discord.Client, artists []string, monitor1Spl bool, retryDel
 
 				resp, err := http.Get(baseURL + artistUrl)
 				if err != nil {
-					//log.Errorf("exchangeArt.Monitor: ERROR Client [%w]", err)
-					time.Sleep(retryDelay * time.Millisecond)
 					continue
 				}
 
 				if resp.StatusCode != 200 {
-					log.Error("exchangeArt.Monitor: Invalid Response Code", "respStatus", resp.Status)
-					time.Sleep(retryDelay * time.Millisecond)
+					logger.LogError(moduleName, fmt.Errorf("invalid response status: %s", resp.Status))
 					continue
 				}
 
 				res := ResponseExchangeArt{}
 				err = json.NewDecoder(resp.Body).Decode(&res)
 				if err != nil {
-					log.Error(err)
 					continue
 				}
 
 				err = resp.Body.Close()
 				if err != nil {
-					log.Error(err)
 					continue
 				}
 
@@ -158,7 +157,7 @@ func Monitor(client discord.Client, artists []string, monitor1Spl bool, retryDel
 				})
 
 				if ea.ToSend {
-					log.Info("Release Found", "artist", ea.Artist, "collection", ea.Name)
+					//log.Info("Release Found", "artist", ea.Artist, "collection", ea.Name)
 					if err = client.ExchangeArtNotification(discord.Webhook{
 						Username:  "ExchangeArt",
 						AvatarUrl: client.AvatarImage,
