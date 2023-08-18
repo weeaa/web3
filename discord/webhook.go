@@ -80,8 +80,7 @@ func (c *Client) SendNotification(content Webhook, module Module) error {
 		webhook = c.EtherscanWebhook
 	}
 
-	err = Push(jsonData, webhook)
-	return err
+	return Push(jsonData, webhook)
 }
 
 func GetTimestamp() string {
