@@ -50,7 +50,6 @@ func Push(data []byte, webhookURL string) error {
 	}
 }
 
-// todo propagate this function to all modules
 func (c *Client) SendNotification(content Webhook, module Module) error {
 	var webhook string
 
@@ -73,50 +72,6 @@ func (c *Client) SendNotification(content Webhook, module Module) error {
 	}
 
 	err = Push(jsonData, webhook)
-	return err
-}
-
-func (c *Client) ExchangeArtNotification(content Webhook) error {
-
-	jsonData, err := json.Marshal(content)
-	if err != nil {
-		return err
-	}
-
-	err = Push(jsonData, c.ExchangeArtWebhook)
-	return err
-}
-
-func (c *Client) PremintNotification(content Webhook) error {
-
-	jsonData, err := json.Marshal(content)
-	if err != nil {
-		return err
-	}
-
-	err = Push(jsonData, c.PremintWebhook)
-	return err
-}
-
-func (c *Client) EtherscanNotification(content Webhook) error {
-
-	jsonData, err := json.Marshal(content)
-	if err != nil {
-		return err
-	}
-
-	err = Push(jsonData, c.PremintWebhook)
-	return err
-}
-
-func (c *Client) LaunchMyNFTNotification(content Webhook) error {
-
-	jsonData, err := json.Marshal(content)
-	if err != nil {
-		return err
-	}
-
-	err = Push(jsonData, c.PremintWebhook)
 	return err
 }
 
