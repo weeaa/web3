@@ -24,7 +24,7 @@ type Contract struct {
 	Link    string
 }
 
-func Monitor(client discord.Client) {
+func Monitor(client *discord.Client) {
 
 	logger.LogStartup(moduleName)
 

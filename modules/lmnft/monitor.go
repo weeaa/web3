@@ -24,7 +24,7 @@ const retryDelay = 2500 * time.Millisecond
 // Monitor monitors SOL Hype Mints by default.
 // If you want to monitor non SOL Mints, switch the "Solana" from the
 // payload to the network you want to monitor.
-func Monitor(client discord.Client, networks []Network, delay time.Duration) {
+func Monitor(client *discord.Client, networks []Network, delay time.Duration) {
 
 	logger.LogStartup(moduleName)
 
@@ -236,8 +236,6 @@ func Monitor(client discord.Client, networks []Network, delay time.Duration) {
 					}, discord.LaunchMyNFT); err != nil {
 						logger.LogError(moduleName, err)
 					}
-
-					//log.Info("Collection Found!", "name", t.Name, "fraction", t.Fraction, "totalMinted", t.TotalMinted, "network", t.Network)
 				} else {
 					//log.Warn("Collection 2 Low :(", "name", t.Name, "fraction", t.Fraction, "totalMinted", t.TotalMinted, "network", t.Network)
 				}
@@ -245,9 +243,7 @@ func Monitor(client discord.Client, networks []Network, delay time.Duration) {
 				h.M.ForEach(func(k string, v interface{}) {
 					h.MCopy.Set(k, v)
 				})
-
 			}
-
 			time.Sleep(delay)
 		}
 	}()

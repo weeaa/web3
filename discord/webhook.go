@@ -9,8 +9,17 @@ import (
 	"time"
 )
 
-func NewClient() *Client {
-	return &Client{}
+func NewClient(exchangeArtWebhook, launchMyNFTWebhook, premintWebhook, etherscanWebhook, brc20Webhook, footerText, footerImage string, color int) *Client {
+	return &Client{
+		BRC20MintsWebhook:  brc20Webhook,
+		ExchangeArtWebhook: exchangeArtWebhook,
+		LaunchMyNFTWebhook: launchMyNFTWebhook,
+		PremintWebhook:     premintWebhook,
+		EtherscanWebhook:   etherscanWebhook,
+		FooterImage:        footerImage,
+		FooterText:         footerText,
+		Color:              color,
+	}
 }
 
 // Push sends a Discord Embed.

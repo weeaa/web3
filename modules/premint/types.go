@@ -25,7 +25,7 @@ type Profile struct {
 	nonce         string
 	handler       handler.Handler
 	Client        tls_client.HttpClient
-	DiscordClient discord.Client
+	DiscordClient *discord.Client
 }
 
 type Webhook struct {

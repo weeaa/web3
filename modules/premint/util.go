@@ -76,9 +76,11 @@ func (p *Profile) login() error {
 			}
 		}
 
-		resp.Body.Close()
+		if err = resp.Body.Close(); err != nil {
+			continue
+		}
 
-		//second req to get some cookies if I remember well :)
+		//second req is following the flow of the login 🌞
 		params := url.Values{
 			"username": {p.publicAddress},
 		}
@@ -177,6 +179,10 @@ func (p *Profile) login() error {
 			if c.Name == "session_id" {
 				p.sessionId = c.Value
 			}
+		}
+
+		if err = resp.Body.Close(); err != nil {
+			continue
 		}
 	}
 }

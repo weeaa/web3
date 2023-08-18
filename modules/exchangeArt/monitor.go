@@ -53,7 +53,7 @@ var DefaultList = []string{
 }
 
 // Monitor monitors newest releases of an artist.
-func Monitor(client discord.Client, artists []string, monitor1Spl bool, retryDelay time.Duration) {
+func Monitor(client *discord.Client, artists []string, monitor1Spl bool, retryDelay time.Duration) {
 	if client.CheckIfNil(client.ExchangeArtWebhook) {
 		logger.LogError(moduleName, errors.New("invalid/empty webhook – monitor stopped"))
 		return
@@ -157,7 +157,6 @@ func Monitor(client discord.Client, artists []string, monitor1Spl bool, retryDel
 				})
 
 				if ea.ToSend {
-					//log.Info("Release Found", "artist", ea.Artist, "collection", ea.Name)
 					if err = client.SendNotification(discord.Webhook{
 						Username:  "ExchangeArt",
 						AvatarUrl: client.AvatarImage,

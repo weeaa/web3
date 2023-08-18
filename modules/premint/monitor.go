@@ -20,7 +20,7 @@ const moduleName = "premint.xyz"
 
 var maxRetriesReached = errors.New("maximum retries reached, aborting function")
 
-func (p *Profile) Monitor(client discord.Client, raffleTypes []RaffleType) {
+func (p *Profile) Monitor(client *discord.Client, raffleTypes []RaffleType) {
 
 	logger.LogStartup(moduleName)
 
