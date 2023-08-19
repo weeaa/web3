@@ -42,7 +42,7 @@ func Monitor(client *discord.Client) {
 		for {
 			req := &http.Request{
 				Method: http.MethodGet,
-				URL:    &url.URL{Scheme: "https://", Host: "etherscan.io", Path: "/contractsVerified"},
+				URL:    &url.URL{Scheme: "https", Host: "etherscan.io", Path: "/contractsVerified"},
 				Header: http.Header{
 					"Authority":                 {"etherscan.io"},
 					"Accept":                    {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"},

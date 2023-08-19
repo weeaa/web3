@@ -29,7 +29,7 @@ func (c *Client) GetFloor(collectionSlug string) (float64, error) {
 
 	req := &http.Request{
 		Method: http.MethodGet,
-		URL:    &url.URL{Scheme: "https://", Host: "api.opensea.io", Path: fmt.Sprintf("/api/v1/collection/%s/stats", collectionSlug)},
+		URL:    &url.URL{Scheme: "https", Host: "api.opensea.io", Path: fmt.Sprintf("/api/v1/collection/%s/stats", collectionSlug)},
 		Header: c.getHeaders(),
 	}
 
