@@ -6,6 +6,9 @@ An NFT monitoring toolkit for tracking NFT drops, sales, listings, and more.
     <img src="https://cdn.discordapp.com/attachments/689063280358064158/1139538002041897041/image.png" margin="auto" height="270"/>
 </div>
 
+## 🚨 Disclaimer
+Note that these monitors have been made months ago and may not be working right now due to site changes.
+
 ## Features
 
 - [x] Etherscan Monitoring
