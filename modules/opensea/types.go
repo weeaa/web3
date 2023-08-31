@@ -3,17 +3,33 @@ package opensea
 import (
 	"github.com/foundVanting/opensea-stream-go/opensea"
 	"math/big"
+	"os"
 )
 
 const (
 	moduleName = "OpenSea"
-	apiKey     = ""
 	host       = ""
+)
+
+var (
+	apiKey = os.Getenv("OPENSEA_APIKEY")
 )
 
 type Client struct {
 	ApiKey       string
 	StreamClient *opensea.StreamClient
+}
+
+type Sale struct {
+	Collection     string
+	CollectionLink string
+	Timestamp      string
+	Item           string
+	Seller         string
+	Buyer          string
+	Image          string
+	Username       string
+	PriceInfo      PriceConversion
 }
 
 type Listing struct {

@@ -1,10 +1,20 @@
 package premint
 
 import (
+	"errors"
 	"github.com/PuerkitoBio/goquery"
 	tls_client "github.com/bogdanfinn/tls-client"
 	"github.com/weeaa/nft/discord"
 	"github.com/weeaa/nft/handler"
+)
+
+const (
+	moduleName = "premint.xyz"
+)
+
+var (
+	maxRetriesReached = errors.New("maximum retries reached, aborting function")
+	RateLimited       = errors.New("you are rate limited :( you got to wait till you're unbanned, which is approx 5+ minutes")
 )
 
 type RaffleType string

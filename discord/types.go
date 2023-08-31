@@ -28,6 +28,7 @@ type Client struct {
 	ExchangeArtWebhook string
 	PremintWebhook     string
 	EtherscanWebhook   string
+	OpenSeaWebhook     string
 }
 
 type ExchangeArtWebhook struct {

@@ -6,8 +6,11 @@ import (
 )
 
 func LogStartup(module string) {
-
 	log.Info(module + " Monitor Started")
+}
+
+func LogShutDown(msg string) {
+	log.Warn(msg)
 }
 
 func LogInfo(module, msg string) {

@@ -1,11 +1,16 @@
 package tls
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
-	tls_client "github.com/bogdanfinn/tls-client"
+	"github.com/bogdanfinn/tls-client"
+	"math/rand"
+	"os"
 	"strings"
 )
 
+// New initializes a TLS client and associates it with a user-defined proxy configuration.
 func New(proxyURL string) tls_client.HttpClient {
 	ckJar := tls_client.NewCookieJar(nil)
 	client, err := tls_client.NewHttpClient(tls_client.NewNoopLogger(),
@@ -22,6 +27,7 @@ func New(proxyURL string) tls_client.HttpClient {
 	return client
 }
 
+// NewProxyLess instantiates a TLS client configured to operate on the localhost IP address.
 func NewProxyLess() tls_client.HttpClient {
 	ckJar := tls_client.NewCookieJar(nil)
 	client, err := tls_client.NewHttpClient(tls_client.NewNoopLogger(),
@@ -37,6 +43,7 @@ func NewProxyLess() tls_client.HttpClient {
 	return client
 }
 
+// newProxy parses a proxy in the correct format.
 func newProxy(unparsedProxy string) string {
 	var proxy string
 	var rawProxy []string
@@ -48,4 +55,29 @@ func newProxy(unparsedProxy string) string {
 		proxy = fmt.Sprintf("http://%s:%s", rawProxy[0], rawProxy[1])
 		return proxy
 	}
+}
+
+// ReadProxyFile reads a .txt file that contains a proxy on each new line & returns the proxies in a []string.
+func ReadProxyFile(path string) (proxies []string, err error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	fileScanner := bufio.NewScanner(f)
+	fileScanner.Split(bufio.ScanLines)
+	for fileScanner.Scan() {
+		proxies = append(proxies, fileScanner.Text())
+	}
+
+	for i := range proxies {
+		r := rand.Intn(i + 1)
+		proxies[i], proxies[r] = proxies[r], proxies[i]
+	}
+
+	if len(proxies) == 0 {
+		return nil, errors.New("empty proxy list")
+	}
+
+	return proxies, nil
 }

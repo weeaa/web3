@@ -9,13 +9,12 @@ import (
 	"github.com/bogdanfinn/tls-client"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/weeaa/nft/pkg/logger"
 	"github.com/weeaa/nft/pkg/tls"
 	"io"
 	"net/url"
 	"strings"
 )
-
-var RateLimited = errors.New("you are rate limited :( you got to wait till you're unbanned, which is approx 5+ minutes")
 
 func NewProfile(publicAddress, privateKey, proxy string, retryDelay int) *Profile {
 	var client tls_client.HttpClient
@@ -40,7 +39,7 @@ func (p *Profile) login() error {
 		//first req to get cookies
 		req := &http.Request{
 			Method: http.MethodGet,
-			URL:    &url.URL{Scheme: "https://", Host: "www.premint.xyz", Path: "/login"},
+			URL:    &url.URL{Scheme: "https", Host: "www.premint.xyz", Path: "/login"},
 			Host:   "www.premint.xyz",
 			Header: http.Header{
 				"user-Agent":                {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"},
@@ -87,7 +86,7 @@ func (p *Profile) login() error {
 
 		req = &http.Request{
 			Method: http.MethodPost,
-			URL:    &url.URL{Scheme: "https://", Host: "www.premint.xyz", Path: "/v1/signup_api/"},
+			URL:    &url.URL{Scheme: "https", Host: "www.premint.xyz", Path: "/v1/signup_api/"},
 			Body:   io.NopCloser(strings.NewReader(params.Encode())),
 			Host:   "www.premint.xyz",
 			Header: http.Header{
@@ -141,7 +140,7 @@ func (p *Profile) login() error {
 		//third req completes login & update sessionId cookie
 		req = &http.Request{
 			Method: http.MethodPost,
-			URL:    &url.URL{Scheme: "https://", Host: "www.premint.xyz", Path: "/v1/login_api/"},
+			URL:    &url.URL{Scheme: "https", Host: "www.premint.xyz", Path: "/v1/login_api/"},
 			Body:   io.NopCloser(strings.NewReader("web3provider=metamask&address=" + p.publicAddress + "&signature=" + signature)),
 			Host:   "www.premint.xyz",
 			Header: http.Header{
@@ -184,19 +183,19 @@ func (p *Profile) login() error {
 		if err = resp.Body.Close(); err != nil {
 			continue
 		}
+
+		break
 	}
+
+	logger.LogInfo(moduleName, "logged in Premint acct")
+	return nil
 }
 
 func (p *Profile) getNonce() error {
 
-	type NonceResponse struct {
-		Nonce   string `json:"data"`
-		Success bool   `json:"success"`
-	}
-
 	req := &http.Request{
 		Method: http.MethodGet,
-		URL:    &url.URL{Scheme: "https://", Host: "www.premint.xyz", Path: "/v1/login_api/"},
+		URL:    &url.URL{Scheme: "https", Host: "www.premint.xyz", Path: "/v1/login_api/"},
 		Host:   "www.premint.xyz",
 		Header: http.Header{
 			"Cookie":             {p.getCookieHeader()},
@@ -233,7 +232,7 @@ func (p *Profile) getNonce() error {
 		return err
 	}
 
-	var nr NonceResponse
+	var nr map[string]any
 	if err = json.Unmarshal(body, &nr); err != nil {
 		return err
 	}
@@ -242,8 +241,8 @@ func (p *Profile) getNonce() error {
 		return err
 	}
 
-	if nr.Success {
-		p.nonce = nr.Nonce
+	if nr["success"].(bool) {
+		p.nonce = nr["data"].(string)
 		return nil
 	} else {
 		return errors.New("unable to get nonce")

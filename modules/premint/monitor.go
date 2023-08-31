@@ -10,15 +10,10 @@ import (
 	"github.com/weeaa/nft/pkg/logger"
 	"golang.org/x/sync/errgroup"
 	"io"
-	"log"
 	"net/url"
 	"strings"
 	"time"
 )
-
-const moduleName = "premint.xyz"
-
-var maxRetriesReached = errors.New("maximum retries reached, aborting function")
 
 func (p *Profile) Monitor(client *discord.Client, raffleTypes []RaffleType) {
 
@@ -50,7 +45,10 @@ func (p *Profile) Monitor(client *discord.Client, raffleTypes []RaffleType) {
 	}()
 }
 
+// fetchRaffles fetches raffle EPs
 func (p *Profile) fetchRaffles(raffleUrl string) error {
+	retries := 0
+
 	for {
 
 		uri, err := url.Parse(raffleUrl)
@@ -85,6 +83,18 @@ func (p *Profile) fetchRaffles(raffleUrl string) error {
 			continue
 		}
 
+		if resp.StatusCode != 200 {
+			if resp.StatusCode == 429 {
+				return RateLimited
+			}
+			retries++
+			if retries >= 5 {
+				return maxRetriesReached
+			}
+			logger.LogError(moduleName, fmt.Errorf("[%s] Fetching Raffle %d/5", resp.Status, retries))
+			continue
+		}
+
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			continue
@@ -107,16 +117,15 @@ func (p *Profile) fetchRaffles(raffleUrl string) error {
 				logger.LogError(moduleName, err)
 			}
 		}
-		continue
+
+		return nil
 	}
 }
 
 func (p *Profile) do(URL string) error {
 	retries := 0
-	task := &Webhook{}
 
 	for {
-
 		req := &http.Request{
 			Method: http.MethodGet,
 			URL:    &url.URL{Scheme: "https", Host: "www.premint.xyz", Path: URL},
@@ -148,15 +157,6 @@ func (p *Profile) do(URL string) error {
 			continue
 		}
 
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			continue
-		}
-
-		if err = resp.Body.Close(); err != nil {
-			continue
-		}
-
 		if resp.StatusCode != 200 {
 			if resp.StatusCode == 429 {
 				return RateLimited
@@ -169,6 +169,16 @@ func (p *Profile) do(URL string) error {
 			continue
 		}
 
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			continue
+		}
+
+		if err = resp.Body.Close(); err != nil {
+			continue
+		}
+
+		task := &Webhook{}
 		task.document, err = goquery.NewDocumentFromReader(strings.NewReader(string(body)))
 		if err != nil {
 			continue
@@ -190,7 +200,7 @@ func (p *Profile) do(URL string) error {
 
 		task.Slug = URL
 		if err = p.DiscordClient.SendNotification(discord.Webhook{
-			Username:  "Premint.xyz",
+			Username:  moduleName,
 			AvatarUrl: "https://pbs.twimg.com/profile_images/1505785782002339840/mgeaHOqx_400x400.jpg",
 			Embeds: []discord.Embed{
 				{
@@ -235,9 +245,9 @@ func (p *Profile) do(URL string) error {
 
 		return nil
 	}
-
 }
 
+// doAllTasks executes all the tasks used to fetch Raffle Information.
 func (t *Webhook) doAllTasks() {
 	g, _ := errgroup.WithContext(context.Background())
 
@@ -266,7 +276,9 @@ func (t *Webhook) doAllTasks() {
 		return nil
 	})
 
-	g.Wait()
+	if err := g.Wait(); err != nil {
+
+	}
 
 	t.updateIfNil()
 }
@@ -394,6 +406,8 @@ func (t *Webhook) getMiscInfo() {
 	}
 }
 
+// updateIfNil verifies whether the content is empty. If it happens to be empty,
+// it is replaced with a cross-mark symbol.
 func (t *Webhook) updateIfNil() {
 	if t.Twitter.Total == "" {
 		t.Twitter.Total = "> • ❌"
@@ -447,8 +461,7 @@ func checkKeywords(word string) bool {
 
 func (t *Webhook) checkClosed() error {
 	if strings.Contains(t.document.Text(), "This list is no longer accepting entries") {
-		log.Println("ERR Raffle Closed")
-		return fmt.Errorf("raffle closed")
+		return errors.New("raffle closed")
 	}
 	return nil
 }

@@ -52,7 +52,7 @@ var DefaultList = []string{
 	trevElViz,
 }
 
-// Monitor monitors newest releases of an artist.
+// Monitor monitors newest releases of an artist from ExchangeArt.
 func Monitor(client *discord.Client, artists []string, monitor1Spl bool, retryDelay time.Duration) {
 	if client.CheckIfNil(client.ExchangeArtWebhook) {
 		logger.LogError(moduleName, errors.New("invalid/empty webhook – monitor stopped"))

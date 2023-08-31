@@ -73,11 +73,12 @@ func (c *Client) SendNotification(content Webhook, module Module) error {
 	case ExchangeArt:
 		webhook = c.ExchangeArtWebhook
 	case OpenSea:
-		//todo add support
+		webhook = c.OpenSeaWebhook
 	case LaunchMyNFT:
 		webhook = c.LaunchMyNFTWebhook
 	case Etherscan:
 		webhook = c.EtherscanWebhook
+
 	}
 
 	return Push(jsonData, webhook)
