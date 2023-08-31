@@ -65,12 +65,12 @@ func Monitor(client *discord.Client) {
 				continue
 			}
 
-			if err = resp.Body.Close(); err != nil {
+			document, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+			if err != nil {
 				continue
 			}
 
-			document, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
-			if err != nil {
+			if err = resp.Body.Close(); err != nil {
 				continue
 			}
 

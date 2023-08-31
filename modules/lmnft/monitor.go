@@ -139,6 +139,10 @@ func Monitor(client *discord.Client, networks []Network, delay time.Duration) {
 				continue
 			}
 
+			if err = resp.Body.Close(); err != nil {
+				continue
+			}
+
 			for i := 0; i < len(res.Results); i++ {
 				t.Name = res.Results[i].Hits[i].Document.CollectionName
 				t.Fraction = res.Results[i].Hits[i].Document.FractionMinted * 100

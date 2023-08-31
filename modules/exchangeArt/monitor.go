@@ -33,8 +33,8 @@ func Monitor(client *discord.Client, artists []string, monitor1Spl bool, retryDe
 
 	for _, artistURL := range artists {
 		go func(artistUrl string) {
+			ea := discord.ExchangeArtWebhook{}
 			for {
-				ea := discord.ExchangeArtWebhook{}
 
 				resp, err := http.Get(baseURL + artistUrl)
 				if err != nil {
@@ -47,13 +47,11 @@ func Monitor(client *discord.Client, artists []string, monitor1Spl bool, retryDe
 				}
 
 				res := ResponseExchangeArt{}
-				err = json.NewDecoder(resp.Body).Decode(&res)
-				if err != nil {
+				if err = json.NewDecoder(resp.Body).Decode(&res); err != nil {
 					continue
 				}
 
-				err = resp.Body.Close()
-				if err != nil {
+				if err = resp.Body.Close(); err != nil {
 					continue
 				}
 

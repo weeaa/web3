@@ -48,7 +48,6 @@ func (p *Profile) Monitor(client *discord.Client, raffleTypes []RaffleType) {
 // fetchRaffles fetches raffle EPs
 func (p *Profile) fetchRaffles(raffleUrl string) error {
 	retries := 0
-
 	for {
 
 		uri, err := url.Parse(raffleUrl)
@@ -124,6 +123,7 @@ func (p *Profile) fetchRaffles(raffleUrl string) error {
 
 func (p *Profile) do(URL string) error {
 	retries := 0
+	task := &Webhook{}
 
 	for {
 		req := &http.Request{
@@ -174,13 +174,12 @@ func (p *Profile) do(URL string) error {
 			continue
 		}
 
-		if err = resp.Body.Close(); err != nil {
+		task.document, err = goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+		if err != nil {
 			continue
 		}
 
-		task := &Webhook{}
-		task.document, err = goquery.NewDocumentFromReader(strings.NewReader(string(body)))
-		if err != nil {
+		if err = resp.Body.Close(); err != nil {
 			continue
 		}
 
@@ -277,7 +276,7 @@ func (t *Webhook) doAllTasks() {
 	})
 
 	if err := g.Wait(); err != nil {
-
+		return
 	}
 
 	t.updateIfNil()
