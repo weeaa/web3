@@ -7,6 +7,7 @@ An NFT monitoring toolkit for tracking NFT drops, sales, listings, and more.
 </div>
 
 ## 🚨 Disclaimer
+This project is WIP!
 Note that these monitors have been made months ago and may not be working right now due to site changes.
 
 ## Features
