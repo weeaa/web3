@@ -3,16 +3,11 @@ package opensea
 import (
 	"github.com/foundVanting/opensea-stream-go/opensea"
 	"math/big"
-	"os"
 )
 
 const (
 	moduleName = "OpenSea"
 	host       = ""
-)
-
-var (
-	apiKey = os.Getenv("OPENSEA_APIKEY")
 )
 
 type Client struct {
