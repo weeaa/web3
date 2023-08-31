@@ -13,17 +13,6 @@ import (
 	"time"
 )
 
-const (
-	moduleName = "Etherscan Verified Contract"
-	retryDelay = 3000
-)
-
-type Contract struct {
-	Address string
-	Name    string
-	Link    string
-}
-
 func Monitor(client *discord.Client) {
 
 	logger.LogStartup(moduleName)
@@ -125,7 +114,7 @@ func Monitor(client *discord.Client) {
 					},
 				},
 			}, discord.Etherscan); err != nil {
-				logger.LogError(moduleName, fmt.Errorf("unable to Send discord webhook: %w", err))
+				logger.LogError(moduleName, err)
 			}
 
 			h.M.ForEach(func(k string, v interface{}) {

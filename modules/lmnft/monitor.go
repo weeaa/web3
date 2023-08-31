@@ -298,7 +298,6 @@ func scrapeCMID(input string) (string, string, string) {
 	}
 
 	return res.Props.PageProps.Collection.NewCandyMachineAccountID, res.Props.PageProps.Collection.Discord, res.Props.PageProps.Collection.Twitter
-
 }
 
 type searchPayload struct {

@@ -13,45 +13,6 @@ import (
 	"time"
 )
 
-const moduleName = "ExchangeArt"
-
-// ExchangeArt's base API used to monitor new FCFS releases.
-const baseURL = "https://api.exchange.art/v2/nfts/created?from=0&sort=listed-oldest&facetsType=collection&limit=10&profileId="
-const DefaultRetryDelay = 2500
-
-// curated list of Artists we used to monitor.
-var (
-	hyblinxx     = "I2LwzWoHzdcibq3ngiFtumfqmJV2"
-	john         = "2Su4KEW92kbhvsv6faONTEDtg9j1"
-	adamApe      = "WQh4eWseb7ObpFVGFxTov08HlSr2"
-	degenpoet    = "wnzwvrxRolf9qXSzWuC9rN4XbcB2"
-	marculinopng = "sP4HMFiwaGXEH4yNLpEU2hdZjAk1"
-	lauraEl      = "UEhYxRezIhNe2TNgXOZXGe2iOD02"
-	RESIST       = "ZYclOZWnpLUo3IlHgmWlJKYBZtf2"
-	purple       = "BEfp6MTyacR0PFXq20ohfbBgRqx1"
-	solPlayBoy   = "kKcu8o7TdkWotU1rw6x5s2r0typ1"
-	flagMonkez   = "0C2v55yVrjbG4fP07yjyZndDqUm2"
-	scum         = "6JDKTmzmFQaGWecWty07xQWQutp1"
-	zen0         = "Dt5i9PQN3ocqYfhmk3jDyBdZCw63"
-	trevElViz    = "pGFZfmUNDGgSarDiI6MhBIOFymJ3"
-)
-
-var DefaultList = []string{
-	hyblinxx,
-	john,
-	adamApe,
-	degenpoet,
-	marculinopng,
-	lauraEl,
-	RESIST,
-	purple,
-	solPlayBoy,
-	flagMonkez,
-	zen0,
-	scum,
-	trevElViz,
-}
-
 // Monitor monitors newest releases of an artist from ExchangeArt.
 func Monitor(client *discord.Client, artists []string, monitor1Spl bool, retryDelay time.Duration) {
 	if client.CheckIfNil(client.ExchangeArtWebhook) {
