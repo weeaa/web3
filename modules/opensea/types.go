@@ -1,20 +1,35 @@
 package opensea
 
 import (
+	"context"
 	"github.com/foundVanting/opensea-stream-go/opensea"
+	"github.com/weeaa/nft/discord"
+	"github.com/weeaa/nft/handler"
 	"math/big"
 )
 
+const DefaultApiKey = "cc98f68d836b4c8c8ab8f894b6e2aae8"
+
 const (
-	moduleName = "OpenSea"
-	host       = ""
+	moduleNameSales    = "OpenSea Sales"
+	moduleNameListings = "OpenSea Listings"
 )
+
+type Settings struct {
+	OpenSeaClient   *Client
+	OpenSeaFloorPct float64
+	Discord         *discord.Client
+	Handler         *handler.Handler
+	Context         context.Context
+	Verbose         bool
+}
 
 type Client struct {
 	ApiKey       string
 	StreamClient *opensea.StreamClient
 }
 
+/*🌊 OPENSEA TYPES 🌊*/
 type Sale struct {
 	Collection     string
 	CollectionLink string

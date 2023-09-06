@@ -10,19 +10,24 @@ import (
 	"time"
 )
 
-func (c *Client) GetListings(client discord.Client, collections []string, floorBelow float64) {
+func (s *Settings) StartMonitor(collections *[]string) {
+	logger.LogStartup(moduleNameListings)
 
-	logger.LogStartup(moduleName + " Listings")
+	go func() {
+		s.monitorListings(collections)
+	}()
+}
 
-	for _, collection := range collections {
+func (s *Settings) monitorListings(collections *[]string) {
+	for _, collection := range *collections {
 		go func(slug string) {
 			var err error
-			c.StreamClient.OnItemListed(slug, func(response any) {
+			s.OpenSeaClient.StreamClient.OnItemListed(slug, func(response any) {
 				var ItemListedEvent entity.ItemListedEvent
 				l := &Listing{}
 
 				if err = mapstructure.Decode(response, &ItemListedEvent); err != nil {
-					logger.LogError(moduleName, err)
+					logger.LogError(moduleNameListings, err)
 				}
 
 				l.Item = ItemListedEvent.Payload.PayloadItemAndColl.Item.Metadata.Name
@@ -40,22 +45,17 @@ func (c *Client) GetListings(client discord.Client, collections []string, floorB
 				l.Image = ItemListedEvent.Payload.PayloadItemAndColl.Item.Metadata.ImageUrl
 				l.Timestamp = time.Now().Unix()
 
-				l.PriceInfo.Floor, err = c.GetFloor(l.Collection)
+				l.PriceInfo.Floor, err = s.GetFloor(l.Collection)
 				if err != nil {
-					logger.LogError(moduleName, err)
+					logger.LogError(moduleNameListings, err)
 				}
-
-				var floorBelow20, double float64
-				floorBelow20 = l.PriceInfo.Floor / floorBelow
-				double = floorBelow20 * 2
-				floorMinus20 := l.PriceInfo.Floor - double
 
 				l.PriceInfo.PriceBefore, _ = l.PriceInfo.Price.Float64()
 
-				if l.PriceInfo.PriceBefore <= floorMinus20 {
-					if err = client.SendNotification(discord.Webhook{
-						Username:  "OpenSea",
-						AvatarUrl: client.AvatarImage,
+				if l.PriceInfo.PriceBefore <= checkIfFloorBelowX(l.PriceInfo.Floor, s.OpenSeaFloorPct) {
+					if err = s.Discord.SendNotification(discord.Webhook{
+						Username:  s.Discord.ProfileName,
+						AvatarUrl: s.Discord.AvatarImage,
 						Embeds: []discord.Embed{
 							{
 								Title:       l.Collection,
@@ -64,11 +64,11 @@ func (c *Client) GetListings(client discord.Client, collections []string, floorB
 									Url: l.Image,
 								},
 								Url:       l.CollectionLink,
-								Color:     client.Color,
+								Color:     s.Discord.Color,
 								Timestamp: discord.GetTimestamp(),
 								Footer: discord.EmbedFooter{
-									Text:    client.FooterText,
-									IconUrl: client.FooterImage,
+									Text:    s.Discord.FooterText,
+									IconUrl: s.Discord.FooterImage,
 								},
 								Fields: []discord.EmbedFields{
 									{
@@ -89,9 +89,12 @@ func (c *Client) GetListings(client discord.Client, collections []string, floorB
 								},
 							},
 						},
-					}, moduleName); err != nil {
-						logger.LogError(moduleName, err)
+					}, moduleNameListings); err != nil {
+						logger.LogError(moduleNameListings, err)
 					}
+				}
+				if s.Verbose {
+					logger.LogInfo(moduleNameListings, fmt.Sprintf("⛵️ new listing found: %s | %d", l.Item, l.Price))
 				}
 			})
 		}(collection)

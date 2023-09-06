@@ -1,6 +1,7 @@
 package premint
 
 import (
+	"context"
 	"errors"
 	"github.com/PuerkitoBio/goquery"
 	tls_client "github.com/bogdanfinn/tls-client"
@@ -26,16 +27,25 @@ var (
 	New    RaffleType = "https://www.premint.xyz/collectors/explore/new"
 )
 
+type Settings struct {
+	Discord *discord.Client
+	Handler *handler.Handler
+	Context context.Context
+	Verbose bool
+	Profile Profile
+}
+
 type Profile struct {
-	RetryDelay    int
-	publicAddress string
-	privateKey    string
-	sessionId     string
-	csrfToken     string
-	nonce         string
-	handler       handler.Handler
-	Client        tls_client.HttpClient
-	DiscordClient *discord.Client
+	RetryDelay      int
+	publicAddress   string
+	privateKey      string
+	sessionId       string
+	csrfToken       string
+	nonce           string
+	Client          tls_client.HttpClient
+	ProxyList       []string
+	RotateProxyOnRL bool
+	isLoggedIn      bool
 }
 
 type Webhook struct {

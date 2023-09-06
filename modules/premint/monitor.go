@@ -7,6 +7,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	http "github.com/bogdanfinn/fhttp"
 	"github.com/weeaa/nft/discord"
+	"github.com/weeaa/nft/handler"
 	"github.com/weeaa/nft/pkg/logger"
 	"golang.org/x/sync/errgroup"
 	"io"
@@ -15,11 +16,48 @@ import (
 	"time"
 )
 
+func NewClient(discordClient *discord.Client, verbose bool, profile Profile) *Settings {
+	return &Settings{
+		Discord: discordClient,
+		Handler: handler.New(),
+		Context: context.Background(),
+		Verbose: verbose,
+		Profile: profile,
+	}
+}
+
+func (s *Settings) StartMonitor(raffleTypes []RaffleType) {
+	logger.LogStartup(moduleName)
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				s.monitorRaffles(raffleTypes)
+				return
+			}
+		}()
+		for !s.monitorRaffles(raffleTypes) {
+			select {
+			case <-s.Context.Done():
+				logger.LogShutDown(moduleName)
+				return
+			default:
+				time.Sleep(10 * time.Minute)
+				continue
+			}
+		}
+	}()
+}
+
+func (s *Settings) monitorRaffles(raffleTypes []RaffleType) bool {
+
+	return false
+}
+
 func (p *Profile) Monitor(client *discord.Client, raffleTypes []RaffleType) {
 
 	logger.LogStartup(moduleName)
 
-	p.DiscordClient = client
 	if err := p.login(); err != nil {
 		logger.LogError(moduleName, err)
 		return

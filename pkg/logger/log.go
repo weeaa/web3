@@ -6,17 +6,17 @@ import (
 )
 
 func LogStartup(module string) {
-	log.Info(module + " Monitor Started")
+	log.Info(fmt.Sprintf("[%s] %s", module, "Monitor Started!"))
 }
 
-func LogShutDown(msg string) {
-	log.Warn(msg)
+func LogShutDown(module string) {
+	log.Warn(fmt.Sprintf("[%s] %s", module, "Monitor Stopped!"))
 }
 
 func LogInfo(module, msg string) {
-	log.Info(fmt.Sprintf("%s %s", module, msg))
+	log.Info(fmt.Sprintf("[%s] %s", module, msg))
 }
 
 func LogError(module string, err error) {
-	log.Error(module, "error", err)
+	log.Error(fmt.Sprintf("[%s]", module), "error", err)
 }

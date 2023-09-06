@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+var TestProxy = newProxy(os.Getenv("TEST_PROXY"))
+
 // New initializes a TLS client and associates it with a user-defined proxy configuration.
 func New(proxyURL string) tls_client.HttpClient {
 	ckJar := tls_client.NewCookieJar(nil)
@@ -41,6 +43,10 @@ func NewProxyLess() tls_client.HttpClient {
 		return nil
 	}
 	return client
+}
+
+func RotateProxy(client tls_client.HttpClient, proxyList string) {
+
 }
 
 // newProxy parses a proxy in the correct format.

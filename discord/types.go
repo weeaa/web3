@@ -4,31 +4,13 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-type Module string
-
-// todo: add all modules supported
-var (
-	Premint     Module = "premint.xyz"
-	Etherscan   Module = "etherscan"
-	ExchangeArt Module = "exchangeArt"
-	LaunchMyNFT Module = "lmnft"
-	OpenSea     Module = "opensea"
-	Ethereum    Module = "ethereum"
-)
-
-type Site string
-
 type Client struct {
-	AvatarImage        string
-	FooterImage        string
-	FooterText         string
-	Color              int
-	BRC20MintsWebhook  string
-	LaunchMyNFTWebhook string
-	ExchangeArtWebhook string
-	PremintWebhook     string
-	EtherscanWebhook   string
-	OpenSeaWebhook     string
+	Webhook     string
+	ProfileName string
+	AvatarImage string
+	FooterImage string
+	FooterText  string
+	Color       int
 }
 
 type ExchangeArtWebhook struct {

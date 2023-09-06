@@ -18,15 +18,13 @@ import (
 	"time"
 )
 
-const moduleName = "LaunchMyNFT"
-const retryDelay = 2500 * time.Millisecond
-
 // Monitor monitors SOL Hype Mints by default.
 // If you want to monitor non SOL Mints, switch the "Solana" from the
 // payload to the network you want to monitor.
 func Monitor(client *discord.Client, networks []Network, delay time.Duration) {
 
 	logger.LogStartup(moduleName)
+	defer logger.LogShutDown(moduleName)
 
 	h := handler.New()
 	t := &Webhook{}
@@ -106,6 +104,7 @@ func Monitor(client *discord.Client, networks []Network, delay time.Duration) {
 
 	if err := json.NewEncoder(&buf).Encode(payload); err != nil {
 		logger.LogError(moduleName, err)
+		return
 	}
 
 	go func() {

@@ -9,16 +9,15 @@ import (
 	"time"
 )
 
-func NewClient(exchangeArtWebhook, launchMyNFTWebhook, premintWebhook, etherscanWebhook, brc20Webhook, footerText, footerImage string, color int) *Client {
+func NewClient(
+	footerText,
+	footerImage string,
+	color int) *Client {
 	return &Client{
-		BRC20MintsWebhook:  brc20Webhook,
-		ExchangeArtWebhook: exchangeArtWebhook,
-		LaunchMyNFTWebhook: launchMyNFTWebhook,
-		PremintWebhook:     premintWebhook,
-		EtherscanWebhook:   etherscanWebhook,
-		FooterImage:        footerImage,
-		FooterText:         footerText,
-		Color:              color,
+
+		FooterImage: footerImage,
+		FooterText:  footerText,
+		Color:       color,
 	}
 }
 
@@ -59,28 +58,11 @@ func Push(data []byte, webhookURL string) error {
 	}
 }
 
-func (c *Client) SendNotification(content Webhook, module Module) error {
-	var webhook string
-
+func (c *Client) SendNotification(content Webhook, webhook string) error {
 	jsonData, err := json.Marshal(content)
 	if err != nil {
 		return err
 	}
-
-	switch module {
-	case Premint:
-		webhook = c.PremintWebhook
-	case ExchangeArt:
-		webhook = c.ExchangeArtWebhook
-	case OpenSea:
-		webhook = c.OpenSeaWebhook
-	case LaunchMyNFT:
-		webhook = c.LaunchMyNFTWebhook
-	case Etherscan:
-		webhook = c.EtherscanWebhook
-
-	}
-
 	return Push(jsonData, webhook)
 }
 
@@ -88,6 +70,10 @@ func GetTimestamp() string {
 	return time.Now().UTC().Format("2006-01-02T15:04:05-0700")
 }
 
-func (c *Client) CheckIfNil(webhook string) bool {
+func (c *Client) IsWebhookLenValid(webhook string) bool {
 	return len(webhook) < 20
+}
+
+func (c *Client) WebhookTest() {
+
 }

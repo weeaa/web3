@@ -30,10 +30,12 @@ func NewProfile(publicAddress, privateKey, proxy string, retryDelay int) *Profil
 		privateKey:    privateKey,
 		Client:        client,
 		RetryDelay:    retryDelay,
+		isLoggedIn:    false,
 	}
 }
 
-func (p *Profile) login() error {
+func (s *Settings) login() error {
+	retries := 0
 	for {
 
 		//first req to get cookies
@@ -53,7 +55,7 @@ func (p *Profile) login() error {
 			},
 		}
 
-		resp, err := p.Client.Do(req)
+		resp, err := s.Profile.Client.Do(req)
 		if err != nil {
 			continue
 		}
@@ -68,10 +70,10 @@ func (p *Profile) login() error {
 		cookies := resp.Cookies()
 		for _, c := range cookies {
 			if c.Name == "csrftoken" {
-				p.csrfToken = c.Value
+				s.Profile.csrfToken = c.Value
 			}
 			if c.Name == "session_id" {
-				p.sessionId = c.Value
+				s.Profile.sessionId = c.Value
 			}
 		}
 
@@ -81,7 +83,7 @@ func (p *Profile) login() error {
 
 		//second req is following the flow of the login 🌞
 		params := url.Values{
-			"username": {p.publicAddress},
+			"username": {s.Profile.publicAddress},
 		}
 
 		req = &http.Request{
@@ -107,7 +109,7 @@ func (p *Profile) login() error {
 			},
 		}
 
-		resp, err = p.Client.Do(req)
+		resp, err = s.Profile.Client.Do(req)
 		if err != nil {
 			continue
 		}
@@ -187,7 +189,12 @@ func (p *Profile) login() error {
 		break
 	}
 
-	logger.LogInfo(moduleName, "logged in Premint acct")
+	s.Profile.isLoggedIn = true
+
+	if s.Verbose {
+		logger.LogInfo(moduleName, "logged in account!")
+	}
+
 	return nil
 }
 

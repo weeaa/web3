@@ -1,14 +1,26 @@
 package exchangeArt
 
-const (
-	moduleName        = "ExchangeArt"
-	DefaultRetryDelay = 2500
+import (
+	"context"
+	"github.com/weeaa/nft/discord"
+	"github.com/weeaa/nft/handler"
+	"time"
 )
 
-// ExchangeArt's base API used to monitor new FCFS releases.
-const baseURL = "https://api.exchange.art/v2/nfts/created?from=0&sort=listed-oldest&facetsType=collection&limit=10&profileId="
+const (
+	moduleName = "ExchangeArt"
+	baseURL    = "https://api.exchange.art/v2/nfts/created?from=0&sort=listed-oldest&facetsType=collection&limit=10&profileId=" // ExchangeArt's base API used to monitor new FCFS releases.
+)
 
-// curated list of Artists we used to monitor.
+type Settings struct {
+	Discord        *discord.Client
+	Handler        *handler.Handler
+	Context        context.Context
+	Verbose        bool
+	Monitor1Supply bool
+	RetryDelay     time.Duration
+}
+
 var (
 	hyblinxx     = "I2LwzWoHzdcibq3ngiFtumfqmJV2"
 	john         = "2Su4KEW92kbhvsv6faONTEDtg9j1"
@@ -25,6 +37,7 @@ var (
 	trevElViz    = "pGFZfmUNDGgSarDiI6MhBIOFymJ3"
 )
 
+// DefaultList is a curated list of Artists we used to monitor.
 var DefaultList = []string{
 	hyblinxx,
 	john,

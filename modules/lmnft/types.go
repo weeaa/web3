@@ -1,5 +1,14 @@
 package lmnft
 
+import (
+	"time"
+)
+
+const (
+	moduleName = "LaunchMyNFT"
+	retryDelay = 2500 * time.Millisecond
+)
+
 type Network string
 
 const (

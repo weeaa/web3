@@ -9,6 +9,7 @@ type Handler struct {
 	MCopy *safemap.SafeMap[string, interface{}]
 }
 
+// New returns an Handler. It is used to store data 🧸.
 func New() *Handler {
 	return &Handler{
 		M:     safemap.New[string, interface{}](),

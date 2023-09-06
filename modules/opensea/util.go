@@ -1,11 +1,14 @@
 package opensea
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/foundVanting/opensea-stream-go/opensea"
 	"github.com/foundVanting/opensea-stream-go/types"
+	"github.com/weeaa/nft/discord"
+	"github.com/weeaa/nft/handler"
 	"github.com/weeaa/nft/pkg/logger"
 	"io"
 	"math/big"
@@ -13,24 +16,35 @@ import (
 	"net/url"
 )
 
-func NewClient(key string) *Client {
-	client := opensea.NewStreamClient(types.MAINNET, key, nil, func(err error) {
-		logger.LogError(moduleName, err)
+func NewClient(discordClient *discord.Client, verbose bool, openseaApiKey string, openseaFloorPCt float64) *Settings {
+	client := opensea.NewStreamClient(types.MAINNET, openseaApiKey, nil, func(err error) {
+		logger.LogError("OpenSea", err)
 		return
 	})
 	if err := client.Connect(); err != nil {
-		logger.LogError(moduleName, err)
+		logger.LogError("OpenSea", err)
 		return nil
 	}
-	return &Client{ApiKey: key, StreamClient: client}
+
+	return &Settings{
+		OpenSeaFloorPct: openseaFloorPCt,
+		Discord:         discordClient,
+		Verbose:         verbose,
+		Handler:         handler.New(),
+		Context:         context.Background(),
+		OpenSeaClient: &Client{
+			ApiKey:       openseaApiKey,
+			StreamClient: client,
+		},
+	}
 }
 
-func (c *Client) GetFloor(collectionSlug string) (float64, error) {
+func (s *Settings) GetFloor(collectionSlug string) (float64, error) {
 
 	req := &http.Request{
 		Method: http.MethodGet,
 		URL:    &url.URL{Scheme: "https", Host: "api.opensea.io", Path: fmt.Sprintf("/api/v1/collection/%s/stats", collectionSlug)},
-		Header: c.getHeaders(),
+		Header: s.getHeaders(),
 	}
 
 	resp, err := http.DefaultClient.Do(req)
@@ -59,15 +73,21 @@ func (c *Client) GetFloor(collectionSlug string) (float64, error) {
 	return cd.Stats.FloorPrice, nil
 }
 
+func checkIfFloorBelowX(floor, pct float64) float64 {
+	return floor - (floor * pct / 100)
+}
+
+//func (s *Settings) checkIfFloorBelowX(floor, pct float64) float64 { return floor - (floor / pct * 2) }
+
 func weiToEther(wei *big.Int) *big.Float {
 	f := new(big.Float).SetPrec(236).SetMode(big.ToNearestEven)
 	fWei := new(big.Float).SetPrec(236).SetMode(big.ToNearestEven)
 	return f.Quo(fWei.SetInt(wei), big.NewFloat(params.Ether))
 }
 
-func (c *Client) getHeaders() http.Header {
+func (s *Settings) getHeaders() http.Header {
 	return http.Header{
 		"accept":    {"application/json"},
-		"x-api-key": {c.ApiKey},
+		"x-api-key": {s.OpenSeaClient.ApiKey},
 	}
 }
