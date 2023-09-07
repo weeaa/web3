@@ -70,10 +70,10 @@ func GetTimestamp() string {
 	return time.Now().UTC().Format("2006-01-02T15:04:05-0700")
 }
 
-func (c *Client) IsWebhookLenValid(webhook string) bool {
+func IsWebhookLenValid(webhook string) bool {
 	return len(webhook) < 20
 }
 
-func (c *Client) WebhookTest() {
-
+func (c *Client) WebhookNotificationTest(webhook string) error {
+	return c.SendNotification(Webhook{Username: "Test Webhook", Embeds: []Embed{{Title: "Test Successful 🦄", Color: 0x008000}}}, webhook)
 }

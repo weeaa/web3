@@ -11,6 +11,7 @@ import (
 	"testing"
 )
 
+// todo finish unit tests
 type MockDiscord struct{}
 
 func (m *MockDiscord) SendNotification(webhook discord.Webhook) error {

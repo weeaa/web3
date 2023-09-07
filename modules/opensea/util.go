@@ -80,9 +80,7 @@ func checkIfFloorBelowX(floor, pct float64) float64 {
 //func (s *Settings) checkIfFloorBelowX(floor, pct float64) float64 { return floor - (floor / pct * 2) }
 
 func weiToEther(wei *big.Int) *big.Float {
-	f := new(big.Float).SetPrec(236).SetMode(big.ToNearestEven)
-	fWei := new(big.Float).SetPrec(236).SetMode(big.ToNearestEven)
-	return f.Quo(fWei.SetInt(wei), big.NewFloat(params.Ether))
+	return new(big.Float).SetPrec(236).SetMode(big.ToNearestEven).Quo(new(big.Float).SetPrec(236).SetMode(big.ToNearestEven).SetInt(wei), big.NewFloat(params.Ether))
 }
 
 func (s *Settings) getHeaders() http.Header {

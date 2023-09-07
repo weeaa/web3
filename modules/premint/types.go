@@ -36,16 +36,17 @@ type Settings struct {
 }
 
 type Profile struct {
-	RetryDelay      int
-	publicAddress   string
-	privateKey      string
-	sessionId       string
-	csrfToken       string
-	nonce           string
-	Client          tls_client.HttpClient
-	ProxyList       []string
-	RotateProxyOnRL bool
-	isLoggedIn      bool
+	publicAddress string
+	privateKey    string
+	sessionId     string
+	csrfToken     string
+	nonce         string
+
+	RetryDelay       int
+	Client           tls_client.HttpClient
+	ProxyList        []string
+	RotateProxyOnBan bool
+	isLoggedIn       bool
 }
 
 type Webhook struct {

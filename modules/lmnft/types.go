@@ -1,6 +1,9 @@
 package lmnft
 
 import (
+	"context"
+	"github.com/weeaa/nft/discord"
+	"github.com/weeaa/nft/handler"
 	"time"
 )
 
@@ -22,6 +25,13 @@ const (
 	Stacks    Network = "Stacks"
 )
 
+type Settings struct {
+	Discord *discord.Client
+	Handler *handler.Handler
+	Context context.Context
+	Verbose bool
+}
+
 type Webhook struct {
 	Name            string
 	Description     string
@@ -36,7 +46,7 @@ type Webhook struct {
 	Twitter         string
 	Discord         string
 	Secondary       string
-	Network         string
+	Network         Network
 	ContractAddress string // for other networks than SOL
 }
 

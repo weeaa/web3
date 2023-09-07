@@ -139,13 +139,13 @@ func (s *Settings) monitorVerifiedContracts() bool {
 	return false
 }
 
-func parseHTML(body []byte) *Contract {
+func parseHTML(body []byte) Contract {
 	document, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
 	if err != nil {
-		return nil
+		return Contract{}
 	}
 
-	return &Contract{
+	return Contract{
 		Address: document.Find("td").First().Find("span").Find("a").AttrOr("title", ""),
 		Name:    document.Find("td").First().Next().Text(),
 	}

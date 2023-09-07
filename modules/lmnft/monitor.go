@@ -8,7 +8,6 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/charmbracelet/log"
 	"github.com/weeaa/nft/discord"
-	"github.com/weeaa/nft/handler"
 	"github.com/weeaa/nft/pkg/logger"
 	"io"
 	"net/http"
@@ -18,26 +17,35 @@ import (
 	"time"
 )
 
-// Monitor monitors SOL Hype Mints by default.
-// If you want to monitor non SOL Mints, switch the "Solana" from the
-// payload to the network you want to monitor.
-func Monitor(client *discord.Client, networks []Network, delay time.Duration) {
-
+func (s *Settings) StartMonitor(networks []Network) {
 	logger.LogStartup(moduleName)
-	defer logger.LogShutDown(moduleName)
-
-	h := handler.New()
-	t := &Webhook{}
-
-	var buf bytes.Buffer
-	var filterByQuery string
-
-	defer func() {
-		if r := recover(); r != nil {
-			Monitor(client, networks, delay)
-			return
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.LogInfo(moduleName, fmt.Sprintf("program panicked! [%v]", r))
+				s.StartMonitor(networks)
+				return
+			}
+		}()
+		for !s.monitorDrops(networks) {
+			select {
+			case <-s.Context.Done():
+				logger.LogShutDown(moduleName)
+				return
+			default:
+				time.Sleep(2 * time.Minute)
+				continue
+			}
 		}
 	}()
+}
+
+// monitorDrops monitors SOL Hype Mints by default.
+// If you want to monitor non SOL Mints, switch the "Solana" from the
+// payload to the network you want to monitor.
+func (s *Settings) monitorDrops(networks []Network) bool {
+	var buf bytes.Buffer
+	var filterByQuery string
 
 	if len(networks) > 0 {
 		var filterByNetworks []string
@@ -104,156 +112,184 @@ func Monitor(client *discord.Client, networks []Network, delay time.Duration) {
 
 	if err := json.NewEncoder(&buf).Encode(payload); err != nil {
 		logger.LogError(moduleName, err)
-		return
+		return false
 	}
 
-	go func() {
-		for {
+	req := &http.Request{
+		Method: http.MethodPost,
+		URL:    &url.URL{Scheme: "https", Host: "s.launchmynft.io", Path: "/multi_search?x-typesense-api-key=UkN4Vnd3V2JMWWVIRlFNcTJ3dng4VGVtMGtvVGxBcmJJTTFFYS9MNXp1WT1Ha3dueyJmaWx0ZXJfYnkiOiJoaWRkZW46ZmFsc2UiLCJleGNsdWRlX2ZpZWxkcyI6ImhpZGRlbiIsInF1ZXJ5X2J5IjoiY29sbGVjdGlvbk5hbWUsb3duZXIiLCJsaW1pdF9oaXRzIjoyMDAsInNuaXBwZXRfdGhyZXNob2xkIjo1MH0%3D"},
+		Body:   io.NopCloser(&buf),
+	}
 
-			//payload := strings.NewReader("{\"searches\":[{\"query_by\":\"collectionName,owner\",\"per_page\":10,\"sort_by\":\"lastMintedAt:desc\",\"highlight_full_fields\":\"collectionName,owner\",\"collection\":\"collections\",\"q\":\"*\",\"facet_by\":\"soldOut,twitterVerified,type,cost\",\"filter_by\":\"soldOut:=[false] && twitterVerified:=[true] && type:=[`Solana`]\",\"max_facet_values\":10,\"page\":3},{\"query_by\":\"collectionName,owner\",\"per_page\":10,\"sort_by\":\"lastMintedAt:desc\",\"highlight_full_fields\":\"collectionName,owner\",\"collection\":\"collections\",\"q\":\"*\",\"facet_by\":\"soldOut\",\"filter_by\":\"twitterVerified:=[true] && type:=[`Solana`]\",\"max_facet_values\":10,\"page\":1},{\"query_by\":\"collectionName,owner\",\"per_page\":10,\"sort_by\":\"lastMintedAt:desc\",\"highlight_full_fields\":\"collectionName,owner\",\"collection\":\"collections\",\"q\":\"*\",\"facet_by\":\"twitterVerified\",\"filter_by\":\"soldOut:=[false] && type:=[`Solana`]\",\"max_facet_values\":10,\"page\":1},{\"query_by\":\"collectionName,owner\",\"per_page\":10,\"sort_by\":\"lastMintedAt:desc\",\"highlight_full_fields\":\"collectionName,owner\",\"collection\":\"collections\",\"q\":\"*\",\"facet_by\":\"type\",\"filter_by\":\"soldOut:=[false] && twitterVerified:=[true]\",\"max_facet_values\":10,\"page\":1}]}")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false
+	}
 
-			req := &http.Request{
-				Method: http.MethodPost,
-				URL:    &url.URL{Scheme: "https", Host: "s.launchmynft.io", Path: "/multi_search?x-typesense-api-key=UkN4Vnd3V2JMWWVIRlFNcTJ3dng4VGVtMGtvVGxBcmJJTTFFYS9MNXp1WT1Ha3dueyJmaWx0ZXJfYnkiOiJoaWRkZW46ZmFsc2UiLCJleGNsdWRlX2ZpZWxkcyI6ImhpZGRlbiIsInF1ZXJ5X2J5IjoiY29sbGVjdGlvbk5hbWUsb3duZXIiLCJsaW1pdF9oaXRzIjoyMDAsInNuaXBwZXRfdGhyZXNob2xkIjo1MH0%3D"},
-				Body:   io.NopCloser(&buf),
+	if resp.StatusCode != 200 {
+		logger.LogError(moduleName, fmt.Errorf("invalid response status: %s", resp.Status))
+		return false
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false
+	}
+
+	var res resLaunchMyNFT
+	var t Webhook
+	if err = json.NewDecoder(bytes.NewBuffer(body)).Decode(&res); err != nil {
+		return false
+	}
+
+	if err = resp.Body.Close(); err != nil {
+		return false
+	}
+
+	for i := 0; i < len(res.Results); i++ {
+		var d discord.Webhook
+
+		embed := d.Embeds[0]
+		embedsField := embed.Fields
+
+		embed.Title = res.Results[i].Hits[i].Document.CollectionName
+		embed.Description = res.Results[i].Hits[i].Document.Description
+		embed.Url = "https://www.launchmynft.io/collections/" + res.Results[i].Hits[i].Document.Owner + "/" + res.Results[i].Hits[i].Document.ID
+		embed.Thumbnail.Url = res.Results[i].Hits[i].Document.CollectionCoverURL
+
+		var contract, discordServer, twitterAccount, secondary string
+		switch res.Results[i].Hits[i].Document.Type {
+		case string(Solana):
+			contract, discordServer, twitterAccount = scrapeInformation(t.MintLink)
+			secondary = fmt.Sprintf("[Secondary Market](https://hyperspace.xyz/collection/%s", contract)
+			if twitterAccount == "" {
+				twitterAccount = "no account :("
+			} else if discordServer == "" {
+				discordServer = "no server :("
+			} else {
+				discordServer = "[Server](https://discord.gg/" + discordServer + ")"
+				twitterAccount = "[Account](https://twitter.com/" + twitterAccount + ")"
+			}
+			//todo add support for other platforms
+		case string(Polygon):
+		case string(Ethereum):
+		case string(Binance):
+		case string(Aptos):
+		case string(Avalanche):
+		case string(Fantom):
+		case string(Stacks):
+		default:
+			logger.LogError(moduleName, errors.New("unknown network"))
+			continue
+		}
+
+		{
+			embedsField[0].Name = "Price"
+			embedsField[0].Value = fmt.Sprintf("%.2f %s", t.Cost, t.Network)
+		}
+		{
+			embedsField[1].Name = "Supply"
+			embedsField[1].Value = fmt.Sprintf("`%d/%d – %.2f%%`", res.Results[i].Hits[i].Document.TotalMints, res.Results[i].Hits[i].Document.MaxSupply, res.Results[i].Hits[i].Document.FractionMinted*100)
+		}
+		{
+			embedsField[2].Name = fmt.Sprintf("%s Contract", res.Results[i].Hits[i].Document.Type)
+			embedsField[2].Value = fmt.Sprintf("`%s`", contract)
+		}
+		{
+			embedsField[3].Name = "Twitter"
+			embedsField[3].Value = twitterAccount
+		}
+		{
+			embedsField[4].Name = "Discord"
+			embedsField[4].Name = discordServer
+		}
+		{
+			embedsField[5].Name = "Secondary"
+			embedsField[5].Value = secondary
+		}
+
+		t.Fraction = res.Results[i].Hits[i].Document.FractionMinted * 100
+
+		s.Handler.M.Set(t.Name, t.TotalMinted)
+
+		if _, ok := s.Handler.MCopy.Get(t.Name); ok {
+
+			continue
+		}
+
+		if t.Fraction >= 6 && t.TotalMinted >= 100 && t.CMID != "" {
+
+			for _, b := range embedsField {
+				b.Inline = true
 			}
 
-			resp, err := http.DefaultClient.Do(req)
-			if err != nil {
-				continue
-			}
-
-			if resp.StatusCode != 200 {
-				logger.LogError(moduleName, fmt.Errorf("invalid response status: %s", resp.Status))
-				continue
-			}
-
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				continue
-			}
-
-			var res resLaunchMyNFT
-			if err = json.NewDecoder(bytes.NewBuffer(body)).Decode(&res); err != nil {
-				continue
-			}
-
-			if err = resp.Body.Close(); err != nil {
-				continue
-			}
-
-			for i := 0; i < len(res.Results); i++ {
-				t.Name = res.Results[i].Hits[i].Document.CollectionName
-				t.Fraction = res.Results[i].Hits[i].Document.FractionMinted * 100
-				t.Cost = res.Results[i].Hits[i].Document.Cost
-				t.Supply = res.Results[i].Hits[i].Document.MaxSupply
-				t.TotalMinted = res.Results[i].Hits[i].Document.TotalMints
-				t.Image = res.Results[i].Hits[i].Document.CollectionCoverURL
-				t.Description = res.Results[i].Hits[i].Document.Description
-				t.MintLink = "https://www.launchmynft.io/collections/" + res.Results[i].Hits[i].Document.Owner + "/" + res.Results[i].Hits[i].Document.ID
-
-				switch res.Results[i].Hits[i].Document.Type {
-				case string(Solana):
-					t.CMID, t.Discord, t.Twitter = scrapeCMID(t.MintLink)
-					t.Secondary = "https://hyperspace.xyz/collection/" + t.CMID
-					if t.Twitter == "" {
-						t.Twitter = "no account :("
-					} else if t.Discord == "" {
-						t.Discord = "no server :("
-					} else {
-						t.Discord = "[Server](https://discord.gg/" + t.Discord + ")"
-						t.Twitter = "[Account](https://twitter.com/" + t.Twitter + ")"
-					}
-				case string(Polygon):
-				case string(Ethereum):
-				case string(Binance):
-				case string(Aptos):
-				case string(Avalanche):
-				case string(Fantom):
-				case string(Stacks):
-				default:
-					logger.LogError(moduleName, errors.New("unknown network"))
-					continue
-				}
-
-				h.M.Set(t.Name, t.TotalMinted)
-
-				if h.M.Get(t.Name) == h.MCopy.Get(t.Name) {
-					time.Sleep(40 * time.Second)
-					continue
-				}
-
-				if t.Fraction >= 6 && t.TotalMinted >= 100 && t.CMID != "" {
-					if err = client.SendNotification(discord.Webhook{
-						Username:  "LaunchMyNFT",
-						AvatarUrl: client.AvatarImage,
-						Embeds: []discord.Embed{
+			if err = s.Discord.SendNotification(discord.Webhook{
+				Username:  s.Discord.ProfileName,
+				AvatarUrl: s.Discord.AvatarImage,
+				Embeds: []discord.Embed{
+					{
+						Title:       t.Name,
+						Description: t.Description,
+						Url:         t.MintLink,
+						Timestamp:   discord.GetTimestamp(),
+						Color:       s.Discord.Color,
+						Footer: discord.EmbedFooter{
+							Text:    s.Discord.FooterText,
+							IconUrl: s.Discord.FooterImage,
+						},
+						Thumbnail: discord.EmbedThumbnail{
+							Url: t.Image,
+						},
+						Fields: []discord.EmbedFields{
 							{
-								Title:       t.Name,
-								Description: t.Description,
-								Url:         t.MintLink,
-								Timestamp:   discord.GetTimestamp(),
-								Color:       client.Color,
-								Footer: discord.EmbedFooter{
-									Text:    client.FooterText,
-									IconUrl: client.FooterImage,
-								},
-								Thumbnail: discord.EmbedThumbnail{
-									Url: t.Image,
-								},
-								Fields: []discord.EmbedFields{
-
-									{
-										Name:   "Price",
-										Value:  fmt.Sprintf("%.2f SOL", t.Cost),
-										Inline: true,
-									},
-									{
-										Name:   "Supply",
-										Value:  "`" + strconv.Itoa(t.TotalMinted) + "/" + strconv.Itoa(t.Supply) + fmt.Sprintf(" — %.2f%%`", t.Fraction),
-										Inline: true,
-									},
-									{
-										Name:   "CandyMachine ID",
-										Value:  "`" + t.CMID + "`",
-										Inline: false,
-									},
-									{
-										Name:   "Twitter",
-										Value:  t.Twitter,
-										Inline: true,
-									},
-									{
-										Name:   "Discord",
-										Value:  t.Discord,
-										Inline: true,
-									},
-									{
-										Name:   "Hyperspace",
-										Value:  "[Secondary Market]" + "(" + t.Secondary + ")",
-										Inline: true,
-									},
-								},
+								Name:   "Price",
+								Value:  fmt.Sprintf("%.2f %s", t.Cost, t.Network),
+								Inline: true,
+							},
+							{
+								Name:   "Supply",
+								Value:  "`" + strconv.Itoa(t.TotalMinted) + "/" + strconv.Itoa(t.Supply) + fmt.Sprintf(" — %.2f%%`", t.Fraction),
+								Inline: true,
+							},
+							{
+								Name:   "CandyMachine ID",
+								Value:  "`" + t.CMID + "`",
+								Inline: false,
+							},
+							{
+								Name:   "Twitter",
+								Value:  t.Twitter,
+								Inline: true,
+							},
+							{
+								Name:   "Discord",
+								Value:  t.Discord,
+								Inline: true,
+							},
+							{
+								Name:   "Hyperspace",
+								Value:  "[Secondary Market]" + "(" + t.Secondary + ")",
+								Inline: true,
 							},
 						},
-					}, discord.LaunchMyNFT); err != nil {
-						logger.LogError(moduleName, err)
-					}
-				} else {
-					//log.Warn("Collection 2 Low :(", "name", t.Name, "fraction", t.Fraction, "totalMinted", t.TotalMinted, "network", t.Network)
-				}
-
-				h.M.ForEach(func(k string, v interface{}) {
-					h.MCopy.Set(k, v)
-				})
+					},
+				},
+			}, s.Discord.Webhook); err != nil {
+				logger.LogError(moduleName, err)
 			}
-			time.Sleep(delay)
+		} else {
+			logger.LogInfo(moduleName, fmt.Sprintf("🐙 collection too low: %s", res.Results[i].Hits[i].Document.CollectionName))
 		}
-	}()
+
+		s.Handler.M.ForEach(func(k string, v any) {
+			s.Handler.MCopy.Set(k, v)
+		})
+	}
+
+	return false
 }
 
-// used for SOL
-func scrapeCMID(input string) (string, string, string) {
+func scrapeInformation(input string) (string, string, string) {
 
 	defaultVal := "–"
 

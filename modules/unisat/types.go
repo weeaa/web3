@@ -1,7 +1,11 @@
 package unisat
 
 import (
+	"context"
 	"errors"
+	tls_client "github.com/bogdanfinn/tls-client"
+	"github.com/weeaa/nft/discord"
+	"github.com/weeaa/nft/handler"
 )
 
 const moduleName = "BRC20"
@@ -10,7 +14,17 @@ var (
 	rateLimited = errors.New("rate limited, retrying in 30s")
 )
 
-type resInfo struct {
+type Settings struct {
+	Discord          *discord.Client
+	Handler          *handler.Handler
+	Context          context.Context
+	Verbose          bool
+	RotateProxyOnBan bool
+	Client           tls_client.HttpClient
+	ProxyList        []string
+}
+
+type resTickers struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`
 	Data struct {
@@ -89,7 +103,7 @@ type resHolders struct {
 	} `json:"data"`
 }
 
-type resFees struct {
+type ResFees struct {
 	FastestFee  string `json:"fastestFee"`
 	HalfHourFee string `json:"halfHourFee"`
 	HourFee     string `json:"hourFee"`

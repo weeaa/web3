@@ -12,7 +12,6 @@ import (
 
 func (s *Settings) StartMonitor(collections *[]string) {
 	logger.LogStartup(moduleNameListings)
-
 	go func() {
 		s.monitorListings(collections)
 	}()
