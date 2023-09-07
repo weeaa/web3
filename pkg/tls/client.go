@@ -10,9 +10,9 @@ import (
 	"strings"
 )
 
-var TestProxy = newProxy(os.Getenv("TEST_PROXY"))
+var TestProxy = NewProxy(os.Getenv("TEST_PROXY"))
 
-// New initializes a TLS client and associates it with a user-defined proxy configuration.
+// New instantiates a TLS client and associates it with a user-defined proxy configuration.
 func New(proxyURL string) tls_client.HttpClient {
 	ckJar := tls_client.NewCookieJar(nil)
 	client, err := tls_client.NewHttpClient(tls_client.NewNoopLogger(),
@@ -21,7 +21,7 @@ func New(proxyURL string) tls_client.HttpClient {
 		tls_client.WithCookieJar(ckJar),
 		tls_client.WithNotFollowRedirects(),
 		tls_client.WithInsecureSkipVerify(),
-		tls_client.WithProxyUrl(newProxy(proxyURL)),
+		tls_client.WithProxyUrl(NewProxy(proxyURL)),
 	)
 	if err != nil {
 		return nil
@@ -45,12 +45,12 @@ func NewProxyLess() tls_client.HttpClient {
 	return client
 }
 
-func RotateProxy(client tls_client.HttpClient, proxyList string) {
-
+func RotateProxy(client tls_client.HttpClient, proxyList []string) error {
+	return client.SetProxy(NewProxy(RandProxyFromList(proxyList)))
 }
 
-// newProxy parses a proxy in the correct format.
-func newProxy(unparsedProxy string) string {
+// NewProxy parses a proxy in the correct format.
+func NewProxy(unparsedProxy string) string {
 	var proxy string
 	var rawProxy []string
 	rawProxy = strings.Split(unparsedProxy, ":")
@@ -61,6 +61,11 @@ func newProxy(unparsedProxy string) string {
 		proxy = fmt.Sprintf("http://%s:%s", rawProxy[0], rawProxy[1])
 		return proxy
 	}
+}
+
+// RandProxyFromList returns a random proxy stored in the list.
+func RandProxyFromList(list []string) string {
+	return list[rand.Intn(len(list))]
 }
 
 // ReadProxyFile reads a .txt file that contains a proxy on each new line & returns the proxies in a []string.
