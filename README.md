@@ -8,7 +8,7 @@ An NFT monitoring toolkit for tracking NFT drops, sales, listings, and more.
 
 ## 🚨 Disclaimer
 This project is WIP!
-Note that these monitors have been made months ago and may not be working right now due to site changes.
+Note that these monitors have been made months ago and may not be working right now due to site changes. Currently re-writing everything.
 
 ## Features
 
@@ -51,28 +51,7 @@ $ go get github.com/weeaa/nft
 
 ### Example
 
-```go
-func main() {
-	
-	client := discord.NewClient(
-		os.Getenv("EXCHANGEART_WEBHOOK"),
-		os.Getenv("LMNFT_WEBHOOK"),
-		os.Getenv("PREMINT_WEBHOOK"),
-		os.Getenv("ETHERSCAN_WEBHOOK"),
-		os.Getenv("BRC20_WEBHOOK"),
-		"weeaa's monitor",
-		"https://image.png",
-		0xFFFFF,
-	)
-	
-	etherscan.Monitor(client)
-	exchangeArt.Monitor(client, exchangeArt.DefaultList, false, 1000)
-	lmnft.Monitor(client, []lmnft.Network{lmnft.Solana, lmnft.Binance}, 1000)
-	
-	profile := premint.NewProfile(os.Getenv("PREMINT_PUB"), os.Getenv("PREMINT_PRIV"), "", 5000)
-	profile.Monitor(client, []premint.RaffleType{premint.Daily, premint.Weekly})
-}
-```
+Go to `/examples` folder!
 
 ## Credits
 
