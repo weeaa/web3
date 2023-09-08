@@ -115,6 +115,8 @@ func (s *Settings) monitorDrops() bool {
 				continue
 			}
 
+			disc.Username = s.Discord.ProfileName
+
 			embed := disc.Embeds[0]
 			embedsField := embed.Fields
 			rawHoldersData, ok := s.fetchHolders(brc.Ticker, supply)
@@ -202,6 +204,8 @@ func (s *Settings) monitorDrops() bool {
 
 // fetchHolders fetches 5 top holders of a BRC20 token on Unisat.
 func (s *Settings) fetchHolders(ticker string, supply int) (map[int]map[string]string, bool) {
+	var r ResHolders
+
 	req := &http.Request{
 		Method: http.MethodGet,
 		URL:    &url.URL{Scheme: "https", Host: "unisat.io", Path: fmt.Sprintf("/brc20-api-v2/brc20/%s/holders?start=0&limit=5", ticker)},
@@ -236,14 +240,17 @@ func (s *Settings) fetchHolders(ticker string, supply int) (map[int]map[string]s
 		return nil, false
 	}
 
-	var res ResHolders
-	err = json.NewDecoder(resp.Body).Decode(&res)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, false
 	}
 
+	if err = json.Unmarshal(body, &r); err != nil {
+		return nil, false
+	}
+
 	var holders = make(map[int]map[string]string)
-	for i, holder := range res.Data.Detail {
+	for i, holder := range r.Data.Detail {
 		mInfo := make(map[string]string)
 		mInfo["address"] = holder.Address
 		mInfo["balance"] = holder.OverallBalance
@@ -255,7 +262,7 @@ func (s *Settings) fetchHolders(ticker string, supply int) (map[int]map[string]s
 	return holders, true
 }
 
-func (s *Settings) GetTickerInfo(ticker string) (ResTickerInfo, error) {
+func (s *Settings) GetTickerInfo(ticker string) (ResTickerInfo, bool) {
 	var r ResTickerInfo
 
 	req := &http.Request{
@@ -279,18 +286,27 @@ func (s *Settings) GetTickerInfo(ticker string) (ResTickerInfo, error) {
 
 	resp, err := s.Client.Do(req)
 	if err != nil {
-		return r, err
+		return r, false
 	}
 
 	if resp.StatusCode != 200 {
-
+		if ok := s.handleRateLimit(resp.StatusCode); !ok {
+			return r, false
+		}
+		logger.LogInfo(moduleName, fmt.Sprintf("unexpected response status: monitorDrops: %s", resp.Status))
+		return r, false
 	}
 
-	if err = json.NewDecoder(resp.Body).Decode(&r); err != nil {
-		return r, err
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return r, false
 	}
 
-	return r, nil
+	if err = json.Unmarshal(body, &r); err != nil {
+		return r, false
+	}
+
+	return r, true
 }
 
 func calculatePercentage(n1, n2 int) float64 {
