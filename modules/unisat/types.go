@@ -2,7 +2,6 @@ package unisat
 
 import (
 	"context"
-	"errors"
 	tls_client "github.com/bogdanfinn/tls-client"
 	"github.com/weeaa/nft/discord"
 	"github.com/weeaa/nft/handler"
@@ -11,10 +10,6 @@ import (
 const (
 	moduleName                              = "Unisat BRC20"
 	DefaultPercentageIncreaseBetweenRefresh = 3
-)
-
-var (
-	rateLimited = errors.New("rate limited, retrying in 30s")
 )
 
 type Settings struct {
