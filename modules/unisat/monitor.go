@@ -82,14 +82,10 @@ func (s *Settings) monitorDrops() bool {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		if ok, rlErr := s.handleRateLimit(resp.StatusCode); ok && rlErr == nil {
-			logger.LogInfo(moduleName, "rotated proxy due to rate limit")
-			return false
+		if ok := s.handleRateLimit(resp.StatusCode); !ok {
+			return ok
 		}
-	}
-	if resp.StatusCode == 429 {
-		logger.LogError(moduleName, rateLimited)
-		time.Sleep(30 * time.Second)
+		logger.LogInfo(moduleName, fmt.Sprintf("unexpected response status: monitorDrops: %s", resp.Status))
 		return false
 	}
 
@@ -121,7 +117,12 @@ func (s *Settings) monitorDrops() bool {
 
 			embed := disc.Embeds[0]
 			embedsField := embed.Fields
-			holders, balance := prettyPrintHolders(s.fetchHolders(brc.Ticker, supply))
+			rawHoldersData, ok := s.fetchHolders(brc.Ticker, supply)
+			if !ok || rawHoldersData == nil {
+				continue
+			}
+
+			holders, balance := prettyPrintHolders(rawHoldersData)
 
 			embed.Title = brc.Ticker
 			embed.Description = fmt.Sprintf("token deployed at: <t:%d> – block: `%d`", brc.DeployBlocktime, brc.DeployHeight)
@@ -200,7 +201,7 @@ func (s *Settings) monitorDrops() bool {
 }
 
 // fetchHolders fetches 5 top holders of a BRC20 token on Unisat.
-func (s *Settings) fetchHolders(ticker string, supply int) map[int]map[string]string {
+func (s *Settings) fetchHolders(ticker string, supply int) (map[int]map[string]string, bool) {
 	req := &http.Request{
 		Method: http.MethodGet,
 		URL:    &url.URL{Scheme: "https", Host: "unisat.io", Path: fmt.Sprintf("/brc20-api-v2/brc20/%s/holders?start=0&limit=5", ticker)},
@@ -222,16 +223,23 @@ func (s *Settings) fetchHolders(ticker string, supply int) map[int]map[string]st
 
 	resp, err := s.Client.Do(req)
 	if err != nil {
-		return nil
+		return nil, false
 	}
 
 	defer resp.Body.Close()
 
+	if resp.StatusCode != 200 {
+		if ok := s.handleRateLimit(resp.StatusCode); !ok {
+			return nil, ok
+		}
+		logger.LogInfo(moduleName, fmt.Sprintf("unexpected response status: monitorDrops: %s", resp.Status))
+		return nil, false
+	}
+
 	var res ResHolders
 	err = json.NewDecoder(resp.Body).Decode(&res)
 	if err != nil {
-		logger.LogError(moduleName, err)
-		return nil
+		return nil, false
 	}
 
 	var holders = make(map[int]map[string]string)
@@ -244,7 +252,7 @@ func (s *Settings) fetchHolders(ticker string, supply int) map[int]map[string]st
 		holders[i] = mInfo
 	}
 
-	return holders
+	return holders, true
 }
 
 func (s *Settings) GetTickerInfo(ticker string) (ResTickerInfo, error) {
@@ -275,17 +283,7 @@ func (s *Settings) GetTickerInfo(ticker string) (ResTickerInfo, error) {
 	}
 
 	if resp.StatusCode != 200 {
-		/*
-			ok, err := s.handleRateLimit(resp.StatusCode)
-			if resp.StatusCode == 429 {
-				logger.LogError(moduleName, fmt.Errorf("rate limited on getTickerInfo"))
-				if s.RotateProxyOnBan {
-					if err = tls.RotateProxy(s.Client, s.ProxyList); err != nil {
 
-					}
-				}
-			}
-		*/
 	}
 
 	if err = json.NewDecoder(resp.Body).Decode(&r); err != nil {
@@ -303,6 +301,7 @@ func generateLinks(ticker, deployer string) string {
 	return fmt.Sprintf("[Unisat](https://unisat.io/unisat/%s) – [Deployer](https://btcscan.org/address/%s) – [Twitter Search](https://twitter.com/search?q=$%s&f=live)", ticker, deployer, ticker)
 }
 
+// GetFees returns current BTC fees.
 func GetFees() (ResFees, error) {
 	var res ResFees
 
@@ -320,6 +319,10 @@ func GetFees() (ResFees, error) {
 	}
 
 	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return res, fmt.Errorf("unexpected response fetching BTC fees: %s", resp.Status)
+	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -361,12 +364,17 @@ func extractFirstAndLastFourLetters(input string) string {
 	return fmt.Sprintf("%s...%s", input[:4], input[len(input)-4:])
 }
 
-func (s *Settings) handleRateLimit(respStatus int) (bool, error) {
+func (s *Settings) handleRateLimit(respStatus int) bool {
 	if respStatus == http.StatusTooManyRequests {
 		if s.RotateProxyOnBan {
-			return true, tls.RotateProxy(s.Client, s.ProxyList)
+			if err := tls.RotateProxy(s.Client, s.ProxyList); err != nil {
+				logger.LogError(moduleName, fmt.Errorf("unable to rotate proxy on client: %v", err))
+				return false
+			}
+			logger.LogInfo(moduleName, "rotated proxy due to rate limit")
+			return true
 		}
-		return true, nil
+		return false
 	}
-	return false, nil
+	return true
 }
