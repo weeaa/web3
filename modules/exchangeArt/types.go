@@ -38,7 +38,7 @@ var (
 )
 
 // DefaultList is a curated list of Artists we used to monitor.
-var DefaultList = []string{
+var DefaultList = &[]string{
 	hyblinxx,
 	john,
 	adamApe,

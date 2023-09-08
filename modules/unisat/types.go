@@ -8,23 +8,27 @@ import (
 	"github.com/weeaa/nft/handler"
 )
 
-const moduleName = "BRC20"
+const (
+	moduleName                              = "Unisat BRC20"
+	DefaultPercentageIncreaseBetweenRefresh = 3
+)
 
 var (
 	rateLimited = errors.New("rate limited, retrying in 30s")
 )
 
 type Settings struct {
-	Discord          *discord.Client
-	Handler          *handler.Handler
-	Context          context.Context
-	Verbose          bool
-	RotateProxyOnBan bool
-	Client           tls_client.HttpClient
-	ProxyList        []string
+	Discord                          *discord.Client
+	Handler                          *handler.Handler
+	Context                          context.Context
+	Verbose                          bool
+	RotateProxyOnBan                 bool
+	Client                           tls_client.HttpClient
+	ProxyList                        []string
+	PercentageIncreaseBetweenRefresh float64
 }
 
-type resTickers struct {
+type ResTickers struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`
 	Data struct {
@@ -58,7 +62,7 @@ type resTickers struct {
 	} `json:"data"`
 }
 
-type resTickerInfo struct {
+type ResTickerInfo struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`
 	Data struct {
@@ -87,7 +91,7 @@ type resTickerInfo struct {
 	} `json:"data"`
 }
 
-type resHolders struct {
+type ResHolders struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`
 	Data struct {

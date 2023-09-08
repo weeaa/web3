@@ -9,6 +9,7 @@ import (
 	"github.com/weeaa/nft/discord"
 	"github.com/weeaa/nft/handler"
 	"github.com/weeaa/nft/pkg/logger"
+	"github.com/weeaa/nft/pkg/tls"
 	"io"
 	"net/url"
 	"sort"
@@ -80,6 +81,12 @@ func (s *Settings) monitorDrops() bool {
 
 	defer resp.Body.Close()
 
+	if resp.StatusCode != 200 {
+		if ok, rlErr := s.handleRateLimit(resp.StatusCode); ok && rlErr == nil {
+			logger.LogInfo(moduleName, "rotated proxy due to rate limit")
+			return false
+		}
+	}
 	if resp.StatusCode == 429 {
 		logger.LogError(moduleName, rateLimited)
 		time.Sleep(30 * time.Second)
@@ -91,7 +98,7 @@ func (s *Settings) monitorDrops() bool {
 		return false
 	}
 
-	var tickers resTickers
+	var tickers ResTickers
 	if err = json.Unmarshal(body, &tickers); err != nil {
 		return false
 	}
@@ -107,14 +114,6 @@ func (s *Settings) monitorDrops() bool {
 			var disc discord.Webhook
 			var fees ResFees
 
-			//s.Handler.M.Get()
-			/*
-				if h.M[t.Name] == h.MCopy[t.Name] {
-					log.Info("is SAME")
-					h.MCopy[t.Name] = h.M[t.Name]
-					continue
-				}*/
-
 			if fees, err = GetFees(); err != nil {
 				logger.LogError(moduleName, err)
 				continue
@@ -122,7 +121,7 @@ func (s *Settings) monitorDrops() bool {
 
 			embed := disc.Embeds[0]
 			embedsField := embed.Fields
-			holders, balance := handleMap(s.fetchHolders(brc.Ticker, supply))
+			holders, balance := prettyPrintHolders(s.fetchHolders(brc.Ticker, supply))
 
 			embed.Title = brc.Ticker
 			embed.Description = fmt.Sprintf("token deployed at: <t:%d> – block: `%d`", brc.DeployBlocktime, brc.DeployHeight)
@@ -174,25 +173,27 @@ func (s *Settings) monitorDrops() bool {
 						continue
 					}
 
-					if (rawPercentage - pctF) >= 3 {
+					if (rawPercentage - pctF) >= s.PercentageIncreaseBetweenRefresh { // was at 3 before
 						if err = s.Discord.SendNotification(disc, s.Discord.Webhook); err != nil {
 							logger.LogError(moduleName, err)
 						}
+						if s.Verbose {
+							logger.LogInfo(moduleName, fmt.Sprintf("🦅 increase spotted for %s | %.2f > %.2f", brc.Ticker, pctF, rawPercentage))
+						}
 					} else {
-						logger.LogInfo(moduleName, "〽️percentage increase is not sufficient")
+						logger.LogInfo(moduleName, fmt.Sprintf("〽️percentage increase is not sufficient for %s", brc.Ticker))
 					}
 				}
 			} else {
 				if err = s.Discord.SendNotification(disc, s.Discord.Webhook); err != nil {
 					logger.LogError(moduleName, err)
 				}
+				if s.Verbose {
+					logger.LogInfo(moduleName, fmt.Sprintf("😇 new ticker found: %s", brc.Ticker))
+				}
 			}
 
 			s.Handler.M.Set(brc.Ticker, fmt.Sprintf("%.2f", rawPercentage))
-
-			s.Handler.M.ForEach(func(k string, v any) {
-				s.Handler.M.Set(k, v)
-			})
 		}
 	}
 	return false
@@ -200,16 +201,9 @@ func (s *Settings) monitorDrops() bool {
 
 // fetchHolders fetches 5 top holders of a BRC20 token on Unisat.
 func (s *Settings) fetchHolders(ticker string, supply int) map[int]map[string]string {
-
-	holdersURL, err := url.Parse(fmt.Sprintf("https://unisat.io/brc20-api-v2/brc20/%s/holders?start=0&limit=5", ticker))
-	if err != nil {
-		logger.LogError(moduleName, err)
-		return nil
-	}
-
 	req := &http.Request{
 		Method: http.MethodGet,
-		URL:    holdersURL,
+		URL:    &url.URL{Scheme: "https", Host: "unisat.io", Path: fmt.Sprintf("/brc20-api-v2/brc20/%s/holders?start=0&limit=5", ticker)},
 		Header: http.Header{
 			"Authority":          {"unisat.io"},
 			"Accept":             {"application/json, text/plain, */*"},
@@ -231,17 +225,13 @@ func (s *Settings) fetchHolders(ticker string, supply int) map[int]map[string]st
 		return nil
 	}
 
-	fmt.Println("holders info", resp.Status)
+	defer resp.Body.Close()
 
-	var res resHolders
+	var res ResHolders
 	err = json.NewDecoder(resp.Body).Decode(&res)
 	if err != nil {
-		return nil
-	}
-
-	err = resp.Body.Close()
-	if err != nil {
 		logger.LogError(moduleName, err)
+		return nil
 	}
 
 	var holders = make(map[int]map[string]string)
@@ -257,16 +247,12 @@ func (s *Settings) fetchHolders(ticker string, supply int) map[int]map[string]st
 	return holders
 }
 
-func (s *Settings) getTickerInfo(ticker string) (string, string) {
-
-	tickerInfoURL, err := url.Parse(fmt.Sprintf("https://unisat.io/brc20-api-v2/brc20/%s/info", ticker))
-	if err != nil {
-		//log.Error(err)
-	}
+func (s *Settings) GetTickerInfo(ticker string) (ResTickerInfo, error) {
+	var r ResTickerInfo
 
 	req := &http.Request{
 		Method: http.MethodGet,
-		URL:    tickerInfoURL,
+		URL:    &url.URL{Scheme: "https", Host: "unisat.io", Path: fmt.Sprintf("/brc20-api-v2/brc20/%s/info", ticker)},
 		Header: http.Header{
 			"Authority":          {"unisat.io"},
 			"Accept":             {"application/json, text/plain, */*"},
@@ -285,28 +271,28 @@ func (s *Settings) getTickerInfo(ticker string) (string, string) {
 
 	resp, err := s.Client.Do(req)
 	if err != nil {
-		//log.Error("CLIENT TICKER", err)
+		return r, err
 	}
 
-	fmt.Println("ticker info", resp.Status)
+	if resp.StatusCode != 200 {
+		/*
+			ok, err := s.handleRateLimit(resp.StatusCode)
+			if resp.StatusCode == 429 {
+				logger.LogError(moduleName, fmt.Errorf("rate limited on getTickerInfo"))
+				if s.RotateProxyOnBan {
+					if err = tls.RotateProxy(s.Client, s.ProxyList); err != nil {
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		//log.Error(err)
+					}
+				}
+			}
+		*/
 	}
 
-	var res resTickerInfo
-	err = json.Unmarshal(body, &res)
-	if err != nil {
-		//log.Error("UNMARSHAL TICKER INFO", err)
+	if err = json.NewDecoder(resp.Body).Decode(&r); err != nil {
+		return r, err
 	}
 
-	err = resp.Body.Close()
-	if err != nil {
-		//log.Error(err)
-	}
-
-	return res.Data.Creator, fmt.Sprint(res.Data.DeployHeight)
+	return r, nil
 }
 
 func calculatePercentage(n1, n2 int) float64 {
@@ -344,15 +330,16 @@ func GetFees() (ResFees, error) {
 	return res, err
 }
 
-// handleMap pretty prints data passed as param.
-func handleMap(holders map[int]map[string]string) (string, string) {
-	var namesBuilder strings.Builder
+// prettyPrintHolders pretty prints data passed as param.
+func prettyPrintHolders(holders map[int]map[string]string) (string, string) {
+	var addressesBuilder strings.Builder
 	var balancesBuilder strings.Builder
 
 	var keys []int
 	for k := range holders {
 		keys = append(keys, k)
 	}
+
 	sort.Ints(keys)
 
 	for _, key := range keys {
@@ -360,11 +347,11 @@ func handleMap(holders map[int]map[string]string) (string, string) {
 		address := fmt.Sprintf("[%s](https://mempool.space/address/%s)", extractFirstAndLastFourLetters(holder["address"]), holder["address"])
 		balance := fmt.Sprintf("%s (%s%%/spl)", holder["balance"], holder["percentage"])
 
-		namesBuilder.WriteString(address + "\n")
+		addressesBuilder.WriteString(address + "\n")
 		balancesBuilder.WriteString(balance + "\n")
 	}
 
-	names := namesBuilder.String()
+	names := addressesBuilder.String()
 	balances := balancesBuilder.String()
 
 	return names, balances
@@ -372,4 +359,14 @@ func handleMap(holders map[int]map[string]string) (string, string) {
 
 func extractFirstAndLastFourLetters(input string) string {
 	return fmt.Sprintf("%s...%s", input[:4], input[len(input)-4:])
+}
+
+func (s *Settings) handleRateLimit(respStatus int) (bool, error) {
+	if respStatus == http.StatusTooManyRequests {
+		if s.RotateProxyOnBan {
+			return true, tls.RotateProxy(s.Client, s.ProxyList)
+		}
+		return true, nil
+	}
+	return false, nil
 }
