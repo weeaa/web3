@@ -48,7 +48,46 @@ func (s *Settings) StartMonitor() {
 }
 
 func (s *Settings) monitorVerifiedContracts() bool {
+	resp, err := doRequest()
+	if err != nil {
+		return false
+	}
 
+	if resp.StatusCode != 200 {
+		logger.LogError(moduleName, fmt.Errorf("invalid response status: %s", resp.Status))
+		return false
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false
+	}
+
+	if err = resp.Body.Close(); err != nil {
+		return false
+	}
+
+	contract := ParseHTML(goquery.NewDocumentFromReader(strings.NewReader(string(body))))
+
+	s.Handler.M.Set(contract.Address, contract.Name)
+	if _, ok := s.Handler.MCopy.Get(contract.Address); ok {
+		return false
+	}
+
+	s.Handler.Copy()
+
+	if err = s.sendDiscordNotification(contract); err != nil {
+		logger.LogError(moduleName, err)
+	}
+
+	if s.Verbose {
+		logger.LogInfo(moduleName, fmt.Sprintf("🎈 new contract found: %s | %s", contract.Address, contract.Name))
+	}
+
+	return false
+}
+
+func doRequest() (*http.Response, error) {
 	req := &http.Request{
 		Method: http.MethodGet,
 		URL:    &url.URL{Scheme: "https", Host: "etherscan.io", Path: "/contractsVerified"},
@@ -69,38 +108,11 @@ func (s *Settings) monitorVerifiedContracts() bool {
 			"User-Agent":                {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"},
 		},
 	}
+	return http.DefaultClient.Do(req)
+}
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return false
-	}
-
-	if resp.StatusCode != 200 {
-		logger.LogError(moduleName, fmt.Errorf("invalid response status: %s", resp.Status))
-		return false
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return false
-	}
-
-	if err = resp.Body.Close(); err != nil {
-		return false
-	}
-
-	contract := parseHTML(body)
-
-	s.Handler.M.Set(contract.Address, contract.Name)
-	if _, ok := s.Handler.MCopy.Get(contract.Address); ok {
-		return false
-	}
-
-	s.Handler.M.ForEach(func(k string, v interface{}) {
-		s.Handler.MCopy.Set(k, v)
-	})
-
-	if err = s.Discord.SendNotification(discord.Webhook{
+func (s *Settings) sendDiscordNotification(contract Contract) error {
+	return s.Discord.SendNotification(discord.Webhook{
 		Username:  s.Discord.ProfileName,
 		AvatarUrl: s.Discord.AvatarImage,
 		Embeds: []discord.Embed{
@@ -128,23 +140,13 @@ func (s *Settings) monitorVerifiedContracts() bool {
 				},
 			},
 		},
-	}, s.Discord.Webhook); err != nil {
-		logger.LogError(moduleName, err)
-	}
-
-	if s.Verbose {
-		logger.LogInfo(moduleName, fmt.Sprintf("🎈 new contract found: %s | %s", contract.Address, contract.Name))
-	}
-
-	return false
+	}, s.Discord.Webhook)
 }
 
-func parseHTML(body []byte) Contract {
-	document, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+func ParseHTML(document *goquery.Document, err error) Contract {
 	if err != nil {
 		return Contract{}
 	}
-
 	return Contract{
 		Address: document.Find("td").First().Find("span").Find("a").AttrOr("title", ""),
 		Name:    document.Find("td").First().Next().Text(),
