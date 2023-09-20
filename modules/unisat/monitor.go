@@ -2,6 +2,7 @@ package unisat
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/bogdanfinn/fhttp"
@@ -17,6 +18,18 @@ import (
 	"strings"
 	"time"
 )
+
+// temp moved here – getting err on goland about Settings struct being undefined in another file
+type Settings struct {
+	Discord                          *discord.Client
+	Handler                          *handler.Handler
+	Context                          context.Context
+	Verbose                          bool
+	RotateProxyOnBan                 bool
+	Client                           tls_client.HttpClient
+	ProxyList                        []string
+	PercentageIncreaseBetweenRefresh float64
+}
 
 func NewClient(discordClient *discord.Client, verbose bool, client tls_client.HttpClient, proxyList []string, rotateOnProxyBan bool) *Settings {
 	return &Settings{
@@ -101,6 +114,7 @@ func (s *Settings) monitorDrops() bool {
 
 	for _, brc := range tickers.Data.Detail {
 
+		encodedTicker := hex.EncodeToString([]byte(brc.Ticker))
 		supply, _ := strconv.Atoi(brc.Max)
 		minted, _ := strconv.Atoi(brc.TotalMinted)
 		rawPercentage := calculatePercentage(minted, supply)
@@ -119,7 +133,7 @@ func (s *Settings) monitorDrops() bool {
 
 			embed := disc.Embeds[0]
 			embedsField := embed.Fields
-			rawHoldersData, ok := s.fetchHolders(brc.Ticker, supply)
+			rawHoldersData, ok := s.FetchHolders(encodedTicker, supply)
 			if !ok || rawHoldersData == nil {
 				continue
 			}
@@ -202,13 +216,13 @@ func (s *Settings) monitorDrops() bool {
 	return false
 }
 
-// fetchHolders fetches 5 top holders of a BRC20 token on Unisat.
-func (s *Settings) fetchHolders(ticker string, supply int) (map[int]map[string]string, bool) {
+// FetchHolders fetches 5 top holders of a BRC20 token on Unisat.
+func (s *Settings) FetchHolders(ticker string, supply int) (map[int]map[string]string, bool) {
 	var r ResHolders
 
 	req := &http.Request{
 		Method: http.MethodGet,
-		URL:    &url.URL{Scheme: "https", Host: "unisat.io", Path: fmt.Sprintf("/brc20-api-v2/brc20/%s/holders?start=0&limit=5", ticker)},
+		URL:    &url.URL{Scheme: "https", Host: host, Path: fmt.Sprintf("%s%s/holders?start=0&limit=5", path, ticker)},
 		Header: http.Header{
 			"Authority":          {"unisat.io"},
 			"Accept":             {"application/json, text/plain, */*"},
@@ -262,6 +276,7 @@ func (s *Settings) fetchHolders(ticker string, supply int) (map[int]map[string]s
 	return holders, true
 }
 
+// GetTickerInfo returns
 func (s *Settings) GetTickerInfo(ticker string) (ResTickerInfo, bool) {
 	var r ResTickerInfo
 
@@ -323,9 +338,9 @@ func GetFees() (ResFees, error) {
 
 	req := &http.Request{
 		Method: http.MethodGet,
-		URL:    &url.URL{Scheme: "https", Host: "bitcoinfees.billfodl.com", Path: "/api/fees/"},
+		URL:    &url.URL{Scheme: "http", Host: "bitcoinfees.billfodl.com", Path: "/api/fees"},
 		Header: http.Header{
-			"user-agent": {"golang :)"},
+			"user-agent": {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"},
 		},
 	}
 

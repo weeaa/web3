@@ -8,8 +8,11 @@ import (
 	"github.com/weeaa/nft/discord"
 	"github.com/weeaa/nft/handler"
 	"github.com/weeaa/nft/pkg/logger"
+	"io"
 	"math/big"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -26,7 +29,7 @@ func NewClient(discordClient *discord.Client, verbose, monitor1Supply bool, retr
 }
 
 // Monitor monitors newest releases of an artist from ExchangeArt.
-func (s *Settings) StartMonitor(artists *[]string) {
+func (s *Settings) StartMonitor(artists []string) {
 	logger.LogStartup(moduleName)
 	go func() {
 		defer func() {
@@ -49,21 +52,28 @@ func (s *Settings) StartMonitor(artists *[]string) {
 	}()
 }
 
-func (s *Settings) monitorArtists(artists *[]string) bool {
+func (s *Settings) monitorArtists(artists []string) bool {
 	wg := sync.WaitGroup{}
-	for _, artistURL := range *artists {
+	for _, artistURL := range artists {
 		wg.Add(1)
 		go func(artist string) {
 			defer wg.Done()
 			var ea discord.ExchangeArtWebhook
 
-			resp, err := http.Get(baseURL + artist)
+			req := &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "api.exchange.art", Path: "/v2/bff/graphql"},
+				Body:   io.NopCloser(strings.NewReader(q(artist))),
+			}
+
+			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
 				return
 			}
 
 			if resp.StatusCode != 200 {
-				logger.LogError(moduleName, fmt.Errorf("invalid response status: %s", resp.Status))
+				logger.LogError(moduleName, fmt.Errorf("artist: %s > invalid response status: %s", artist, resp.Status))
+				time.Sleep(2500 * time.Millisecond)
 				return
 			}
 
@@ -130,11 +140,9 @@ func (s *Settings) monitorArtists(artists *[]string) bool {
 				return
 			}
 
-			s.Handler.M.ForEach(func(k string, v interface{}) {
-				s.Handler.MCopy.Set(k, v)
-			})
+			s.Handler.Copy()
 
-			if ea.ToSend {
+			if ea.ToSend && s.Discord.Webhook != "" {
 				if err = s.Discord.SendNotification(discord.Webhook{
 					Username:  s.Discord.ProfileName,
 					AvatarUrl: s.Discord.AvatarImage,
@@ -192,4 +200,32 @@ func (s *Settings) monitorArtists(artists *[]string) bool {
 	}
 	wg.Wait()
 	return false
+}
+
+func doRequest(artist string) (*http.Response, error) {
+	req := &http.Request{
+		Method: http.MethodPost,
+		URL:    &url.URL{Scheme: "https", Host: "api.exchange.art", Path: "/v2/bff/graphql"},
+		Body:   io.NopCloser(strings.NewReader(q(artist))),
+		Header: http.Header{
+			"authority":          {"api.exchange.art"},
+			"accept":             {"application/json, text/plain, */*"},
+			"accept-language":    {"en-US,en;q=0.9"},
+			"content-type":       {"application/json"},
+			"origin":             {"https://exchange.art"},
+			"referer":            {"https://exchange.art/"},
+			"sec-ch-ua":          {"Not)A;Brand\";v=\"24\", \"Chromium\";v=\"116\""},
+			"sec-ch-ua-mobile":   {"?0"},
+			"sec-ch-ua-platform": {"\"macOS\""},
+			"sec-fetch-dest":     {"empty"},
+			"sec-fetch-mode":     {"cors"},
+			"sec-fetch-site":     {"same-site"},
+			"user-agent":         {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"},
+		},
+	}
+	return http.DefaultClient.Do(req)
+}
+
+func q(artist string) string {
+	return fmt.Sprintf("{\"query\":\"\n  \n  fragment SellingAgreementsFragment on SellingAgreements {\n    buyNow {\n      createdAt\n      createdBy\n      currency\n      price\n      priceUsd\n      governingProgram\n      stateAccount\n      escrowAccount\n      beginsAt\n      royaltyProtection\n    }\n    offers {\n      createdAt\n      createdBy\n      currency\n      price\n      priceUsd\n      governingProgram\n      stateAccount\n      escrowAccount\n    }\n    auctions {\n      createdAt\n      createdBy\n      currency\n      price\n      priceUsd\n      governingProgram\n      stateAccount\n      escrowAccount\n      endsAt\n      beginsAt\n      endingPhase\n      endingPhasePercentageFlip\n      extensionWindow\n      minimumIncrement\n      reservePrice\n      reservePriceUsd\n      highestBid\n      highestBidUsd\n      highestBidder\n      numberOfBids\n    }\n    editionSales {\n      createdAt\n      createdBy\n      currency\n      price\n      governingProgram\n      stateAccount\n      escrowAccount\n      preSaleWindow\n      pricingType\n      royaltyProtection\n      saleType\n      beginsAt\n      walletMintingCapacity\n      addressLookupTable\n    }\n  }\n\n  \n  \n  fragment SeriesFragment on Series {\n    id\n    description\n    isCertified\n    isCurated\n    isNsfw\n    isOneOfOne\n    name\n    primaryCategory\n    secondaryCategory\n    tags\n    tertiaryCategory\n    website\n    discord\n    twitter\n    thumbnailPath\n    bannerPath\n  }\n\n  fragment NftWithArtistProfileFragmentAndSeries on Nft {\n    id\n    blockchain\n    seriesIds\n    series {\n      ...SeriesFragment\n    }\n    masterEdition {\n      address\n      supply\n      maxSupply\n      permanentlyEnd\n    }\n    edition {\n      address\n      masterEditionId\n      parent\n      num\n    }\n    mintedAt\n    mintedOnExchange\n    artistProfileId\n    artistProfile {\n      md {\n        displayName\n        slug\n      }\n      assets {\n        thumbnail\n      }\n      twitter {\n        handle\n      }\n    }\n    curated\n    certified\n    discounted\n    nsfw\n    aiGenerated\n    royaltyProtected\n    category\n    metadata {\n      accountAddress\n      name\n      symbol\n      updateAuthority\n      primarySaleHappened\n      isMutable\n      creators {\n        address\n        royaltyBps\n      }\n    }\n    json {\n      uri\n      image\n      description\n      attributes {\n        value\n        traitType\n      }\n      files {\n        uri\n        type\n      }\n    }\n  }\n\n  \n  fragment StockReportFragment on StockReport {\n    totalBuyNowSellingAgreements\n    totalAuctionSellingAgreements\n    totalOfferSellingAgreements\n    lowestBuyNowPriceUsd\n    highestBuyNowPriceUsd\n    lowestAuctionPriceUsd\n    highestAuctionPriceUsd\n    lowestOfferPriceUsd\n    highestOfferPriceUsd\n  }\n\n  \n  fragment NftStatsFragment on NftStats {\n    lastSale {\n      currency\n      amount\n      amountUsd\n    }\n  }\n\n  query stockEntry($input: GetStockDto!) {\n    getStockResponse(input: $input) {\n      results {\n        nft {\n          ...NftWithArtistProfileFragmentAndSeries\n        }\n        sellingAgreements {\n          ...SellingAgreementsFragment\n        }\n        report {\n          ...StockReportFragment\n        }\n        nftStats {\n          ...NftStatsFragment\n        }\n      }\n      total\n    }\n  }\n\",\"variables\":{\"input\":{\"from\":0,\"sort\":\"newest_listed\",\"filters\":{\"currencies\":[],\"nftArtistProfileIds\":[\"VBCLsHr5bmNFuzq7fvRm9n5dlF12\"]},\"limit\":20}}}")
 }

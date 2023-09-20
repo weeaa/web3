@@ -20,3 +20,7 @@ func LogInfo(module, msg string) {
 func LogError(module string, err error) {
 	log.Error(fmt.Sprintf("[%s]", module), "error", err)
 }
+
+func LogFatal(module string, msg any) {
+	log.Fatal(fmt.Sprintf("[%s] %v", module, msg))
+}

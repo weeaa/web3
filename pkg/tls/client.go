@@ -10,15 +10,15 @@ import (
 	"strings"
 )
 
-var TestProxy = NewProxy(os.Getenv("TEST_PROXY"))
+//var TestProxy = NewProxy(os.Getenv("TEST_PROXY"))
 
 // New instantiates a TLS client and associates it with a user-defined proxy configuration.
 func New(proxyURL string) tls_client.HttpClient {
-	ckJar := tls_client.NewCookieJar(nil)
+	//ckJar := tls_client.NewCookieJar(nil)
 	client, err := tls_client.NewHttpClient(tls_client.NewNoopLogger(),
 		tls_client.WithClientProfile(tls_client.Chrome_112),
 		tls_client.WithTimeoutSeconds(tls_client.DefaultTimeoutSeconds),
-		tls_client.WithCookieJar(ckJar),
+		//	tls_client.WithCookieJar(ckJar),
 		tls_client.WithNotFollowRedirects(),
 		tls_client.WithInsecureSkipVerify(),
 		tls_client.WithProxyUrl(NewProxy(proxyURL)),
@@ -31,12 +31,12 @@ func New(proxyURL string) tls_client.HttpClient {
 
 // NewProxyLess instantiates a TLS client configured to operate on the localhost IP address.
 func NewProxyLess() tls_client.HttpClient {
-	ckJar := tls_client.NewCookieJar(nil)
+	//ckJar := tls_client.NewCookieJar(nil)
 	client, err := tls_client.NewHttpClient(tls_client.NewNoopLogger(),
 		tls_client.WithClientProfile(tls_client.Chrome_112),
 		tls_client.WithTimeoutSeconds(tls_client.DefaultTimeoutSeconds),
 		tls_client.WithTimeoutSeconds(10),
-		tls_client.WithCookieJar(ckJar),
+		//	tls_client.WithCookieJar(ckJar),
 		tls_client.WithNotFollowRedirects(),
 		tls_client.WithInsecureSkipVerify())
 	if err != nil {

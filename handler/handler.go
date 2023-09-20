@@ -16,3 +16,9 @@ func New() *Handler {
 		MCopy: safemap.New[string, interface{}](),
 	}
 }
+
+func (h *Handler) Copy() {
+	h.M.ForEach(func(k string, v interface{}) {
+		h.MCopy.Set(k, v)
+	})
+}

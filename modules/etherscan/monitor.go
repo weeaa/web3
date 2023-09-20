@@ -40,7 +40,7 @@ func (s *Settings) StartMonitor() {
 				logger.LogShutDown(moduleName)
 				return
 			default:
-				time.Sleep(3500 * time.Millisecond)
+				time.Sleep(time.Duration(s.RetryDelay) * time.Millisecond)
 				continue
 			}
 		}
@@ -76,8 +76,10 @@ func (s *Settings) monitorVerifiedContracts() bool {
 
 	s.Handler.Copy()
 
-	if err = s.sendDiscordNotification(contract); err != nil {
-		logger.LogError(moduleName, err)
+	if s.Discord.Webhook != "" {
+		if err = s.sendDiscordNotification(contract); err != nil {
+			logger.LogError(moduleName, err)
+		}
 	}
 
 	if s.Verbose {

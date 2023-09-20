@@ -16,6 +16,8 @@ func TestMonitorVerifiedContracts(t *testing.T) {
 		assert.Error(t, fmt.Errorf("expected no error but got %w", err))
 	}
 
+	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		assert.Error(t, fmt.Errorf("expected %d but got %d", http.StatusOK, resp.StatusCode))
 	}

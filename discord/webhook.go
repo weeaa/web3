@@ -41,7 +41,6 @@ func Push(data []byte, webhookURL string) error {
 		switch resp.StatusCode {
 		case 204:
 			return nil
-
 		case 429:
 			var timeout int
 

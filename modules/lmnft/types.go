@@ -32,22 +32,38 @@ type Settings struct {
 	Verbose bool
 }
 
-type Webhook struct {
-	Name            string
-	Description     string
-	Image           string
-	MintLink        string
-	CMID            string
-	Supply          int
-	TotalMinted     int
-	Cost            float64
-	Fraction        float64
-	Verified        bool
-	Twitter         string
-	Discord         string
-	Secondary       string
-	Network         Network
-	ContractAddress string // for other networks than SOL
+type searchPayload struct {
+	Searches Searches `json:"searches"`
+}
+
+type Searches []struct {
+	QueryBy             string `json:"query_by"`
+	PerPage             int    `json:"per_page"`
+	SortBy              string `json:"sort_by"`
+	HighlightFullFields string `json:"highlight_full_fields"`
+	Collection          string `json:"collection"`
+	Q                   string `json:"q"`
+	FacetBy             string `json:"facet_by"`
+	FilterBy            string `json:"filter_by"`
+	MaxFacetValues      int    `json:"max_facet_values"`
+	Page                int    `json:"page"`
+}
+
+type Release struct {
+	Name        string
+	Description string
+	Image       string
+	Link        string
+	Contract    string
+	Supply      int
+	TotalMinted int
+	Cost        float64
+	Fraction    float64
+	Verified    bool
+	Twitter     string
+	Discord     string
+	Secondary   string
+	Network     Network
 }
 
 type resLaunchMyNFT struct {
@@ -358,4 +374,241 @@ type resAvalanche struct {
 	DynamicIds   []int  `json:"dynamicIds"`
 	Gssp         bool   `json:"gssp"`
 	ScriptLoader []any  `json:"scriptLoader"`
+}
+
+type resStacks struct {
+	Props struct {
+		PageProps struct {
+			Collection struct {
+				Owner           string      `json:"owner"`
+				Address         string      `json:"address"`
+				Cost            string      `json:"cost"`
+				Hidden          bool        `json:"hidden"`
+				ContractName    string      `json:"contractName"`
+				MaxSupply       int         `json:"maxSupply"`
+				LaunchLater     bool        `json:"launchLater"`
+				MetadataCID     string      `json:"metadataCID"`
+				Type            string      `json:"type"`
+				TransactionHash string      `json:"transactionHash"`
+				CollectionName  string      `json:"collectionName"`
+				Deployed        int64       `json:"deployed"`
+				FractionMinted  int         `json:"fractionMinted"`
+				LastMintedAt    int64       `json:"lastMintedAt"`
+				SoldOut         bool        `json:"soldOut"`
+				TotalMints      int         `json:"totalMints"`
+				StartTime       interface{} `json:"startTime"`
+				LaunchDate      interface{} `json:"launchDate"`
+			} `json:"collection"`
+			DynamicCtx interface{} `json:"dynamicCtx"`
+		} `json:"pageProps"`
+		NSSP bool `json:"__N_SSP"`
+	} `json:"props"`
+	Page  string `json:"page"`
+	Query struct {
+		Userid       string `json:"userid"`
+		Collectionid string `json:"collectionid"`
+	} `json:"query"`
+	BuildId      string        `json:"buildId"`
+	IsFallback   bool          `json:"isFallback"`
+	DynamicIds   []int         `json:"dynamicIds"`
+	Gssp         bool          `json:"gssp"`
+	ScriptLoader []interface{} `json:"scriptLoader"`
+}
+
+type resSui struct {
+	Props struct {
+		PageProps struct {
+			Collection struct {
+				Owner               string      `json:"owner"`
+				ImageCID            string      `json:"imageCID"`
+				Creator             string      `json:"creator"`
+				Cost                string      `json:"cost"`
+				Hidden              bool        `json:"hidden"`
+				Module              string      `json:"module"`
+				Deployed            int64       `json:"deployed"`
+				Cm                  string      `json:"cm"`
+				Type                string      `json:"type"`
+				Supply              int         `json:"supply"`
+				CollectionName      string      `json:"collectionName"`
+				MaxSupply           int         `json:"maxSupply"`
+				NftDescription      string      `json:"nftDescription"`
+				SoldOut             bool        `json:"soldOut"`
+				Twitter             string      `json:"twitter"`
+				TwitterVerified     bool        `json:"twitterVerified"`
+				CollectionBannerUrl string      `json:"collectionBannerUrl"`
+				CollectionCoverUrl  string      `json:"collectionCoverUrl"`
+				Discord             string      `json:"discord"`
+				Description         string      `json:"description"`
+				HasSoldEnough       bool        `json:"hasSoldEnough"`
+				FractionMinted      float64     `json:"fractionMinted"`
+				LastMintedAt        int64       `json:"lastMintedAt"`
+				TotalMints          int         `json:"totalMints"`
+				MintedLast30Mins    bool        `json:"mintedLast30mins"`
+				StartTime           interface{} `json:"startTime"`
+				LaunchDate          interface{} `json:"launchDate"`
+			} `json:"collection"`
+			DynamicCtx interface{} `json:"dynamicCtx"`
+		} `json:"pageProps"`
+		NSSP bool `json:"__N_SSP"`
+	} `json:"props"`
+	Page  string `json:"page"`
+	Query struct {
+		Userid       string `json:"userid"`
+		Collectionid string `json:"collectionid"`
+	} `json:"query"`
+	BuildId      string        `json:"buildId"`
+	IsFallback   bool          `json:"isFallback"`
+	DynamicIds   []int         `json:"dynamicIds"`
+	Gssp         bool          `json:"gssp"`
+	ScriptLoader []interface{} `json:"scriptLoader"`
+}
+
+type resBinance struct {
+	Props struct {
+		PageProps struct {
+			Collection struct {
+				ContractHash string `json:"contractHash"`
+				Type         string `json:"type"`
+				Owner        string `json:"owner"`
+				Address      string `json:"address"`
+				Cost         string `json:"cost"`
+				Hidden       bool   `json:"hidden"`
+				RevealLater  bool   `json:"revealLater"`
+				Abi          []struct {
+					Inputs []struct {
+						Indexed      bool   `json:"indexed,omitempty"`
+						Name         string `json:"name"`
+						InternalType string `json:"internalType"`
+						Type         string `json:"type"`
+						Components   []struct {
+							Name         string `json:"name"`
+							InternalType string `json:"internalType"`
+							Type         string `json:"type"`
+						} `json:"components,omitempty"`
+					} `json:"inputs"`
+					StateMutability string `json:"stateMutability,omitempty"`
+					Type            string `json:"type"`
+					Name            string `json:"name,omitempty"`
+					Anonymous       bool   `json:"anonymous,omitempty"`
+					Outputs         []struct {
+						Name         string `json:"name"`
+						InternalType string `json:"internalType"`
+						Type         string `json:"type"`
+						Components   []struct {
+							Name         string `json:"name"`
+							InternalType string `json:"internalType"`
+							Type         string `json:"type"`
+						} `json:"components,omitempty"`
+					} `json:"outputs,omitempty"`
+				} `json:"abi"`
+				Deployed         int64       `json:"deployed"`
+				HeartCount       int         `json:"heartCount"`
+				Version          int         `json:"version"`
+				TransactionHash  string      `json:"transactionHash"`
+				CollectionName   string      `json:"collectionName"`
+				Immutable        bool        `json:"immutable"`
+				ChainId          int         `json:"chainId"`
+				ContractName     string      `json:"contractName"`
+				MaxSupply        int         `json:"maxSupply"`
+				MetadataCID      string      `json:"metadataCID"`
+				MaxMints         string      `json:"maxMints"`
+				EnforceRoyalties bool        `json:"enforceRoyalties"`
+				FractionMinted   int         `json:"fractionMinted"`
+				LastMintedAt     int64       `json:"lastMintedAt"`
+				SoldOut          bool        `json:"soldOut"`
+				HasSoldEnough    bool        `json:"hasSoldEnough"`
+				TotalMints       int         `json:"totalMints"`
+				MintedLast30Mins bool        `json:"mintedLast30mins"`
+				StartTime        interface{} `json:"startTime"`
+				LaunchDate       interface{} `json:"launchDate"`
+			} `json:"collection"`
+			DynamicCtx interface{} `json:"dynamicCtx"`
+		} `json:"pageProps"`
+		NSSP bool `json:"__N_SSP"`
+	} `json:"props"`
+	Page  string `json:"page"`
+	Query struct {
+		Userid       string `json:"userid"`
+		Collectionid string `json:"collectionid"`
+	} `json:"query"`
+	BuildId      string        `json:"buildId"`
+	IsFallback   bool          `json:"isFallback"`
+	DynamicIds   []int         `json:"dynamicIds"`
+	Gssp         bool          `json:"gssp"`
+	ScriptLoader []interface{} `json:"scriptLoader"`
+}
+
+type resFantom struct {
+	Props struct {
+		PageProps struct {
+			Collection struct {
+				ContractHash string `json:"contractHash"`
+				Type         string `json:"type"`
+				Owner        string `json:"owner"`
+				Address      string `json:"address"`
+				Cost         string `json:"cost"`
+				Hidden       bool   `json:"hidden"`
+				RevealLater  bool   `json:"revealLater"`
+				Abi          []struct {
+					Inputs []struct {
+						Name         string `json:"name"`
+						InternalType string `json:"internalType"`
+						Type         string `json:"type"`
+						Indexed      bool   `json:"indexed,omitempty"`
+						Components   []struct {
+							Name         string `json:"name"`
+							InternalType string `json:"internalType"`
+							Type         string `json:"type"`
+						} `json:"components,omitempty"`
+					} `json:"inputs"`
+					StateMutability string `json:"stateMutability,omitempty"`
+					Type            string `json:"type"`
+					Name            string `json:"name,omitempty"`
+					Anonymous       bool   `json:"anonymous,omitempty"`
+					Outputs         []struct {
+						Name         string `json:"name"`
+						InternalType string `json:"internalType"`
+						Type         string `json:"type"`
+						Components   []struct {
+							Name         string `json:"name"`
+							InternalType string `json:"internalType"`
+							Type         string `json:"type"`
+						} `json:"components,omitempty"`
+					} `json:"outputs,omitempty"`
+				} `json:"abi"`
+				Deployed            int64       `json:"deployed"`
+				HeartCount          int         `json:"heartCount"`
+				Version             int         `json:"version"`
+				TransactionHash     string      `json:"transactionHash"`
+				CollectionName      string      `json:"collectionName"`
+				Immutable           bool        `json:"immutable"`
+				ChainId             int         `json:"chainId"`
+				ContractName        string      `json:"contractName"`
+				MaxSupply           int         `json:"maxSupply"`
+				MetadataCID         string      `json:"metadataCID"`
+				MaxMints            string      `json:"maxMints"`
+				EnforceRoyalties    bool        `json:"enforceRoyalties"`
+				Twitter             string      `json:"twitter"`
+				TwitterVerified     bool        `json:"twitterVerified"`
+				CollectionBannerUrl string      `json:"collectionBannerUrl"`
+				CollectionCoverUrl  string      `json:"collectionCoverUrl"`
+				Description         string      `json:"description"`
+				StartTime           interface{} `json:"startTime"`
+				LaunchDate          interface{} `json:"launchDate"`
+				LastMintedAt        interface{} `json:"lastMintedAt"`
+			} `json:"collection"`
+			DynamicCtx interface{} `json:"dynamicCtx"`
+		} `json:"pageProps"`
+		NSSP bool `json:"__N_SSP"`
+	} `json:"props"`
+	Page  string `json:"page"`
+	Query struct {
+		Userid       string `json:"userid"`
+		Collectionid string `json:"collectionid"`
+	} `json:"query"`
+	BuildId      string        `json:"buildId"`
+	IsFallback   bool          `json:"isFallback"`
+	DynamicIds   []int         `json:"dynamicIds"`
+	Gssp         bool          `json:"gssp"`
+	ScriptLoader []interface{} `json:"scriptLoader"`
 }

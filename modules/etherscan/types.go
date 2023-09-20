@@ -7,15 +7,16 @@ import (
 )
 
 const (
-	moduleName = "Etherscan Verified Contract"
-	retryDelay = 3000
+	moduleName        = "Etherscan Verified Contract"
+	DefaultRetryDelay = 3000
 )
 
 type Settings struct {
-	Discord *discord.Client
-	Handler *handler.Handler
-	Context context.Context
-	Verbose bool
+	Discord    *discord.Client
+	Handler    *handler.Handler
+	Context    context.Context
+	Verbose    bool
+	RetryDelay int
 }
 
 type Contract struct {

@@ -2,7 +2,6 @@ package premint
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	http "github.com/bogdanfinn/fhttp"
@@ -13,6 +12,7 @@ import (
 	"io"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -50,6 +50,16 @@ func (s *Settings) StartMonitor(raffleTypes []RaffleType) {
 }
 
 func (s *Settings) monitorRaffles(raffleTypes []RaffleType) bool {
+	wg := sync.WaitGroup{}
+
+	for _, raffleType := range raffleTypes {
+		wg.Add(1)
+		go func(rType RaffleType) {
+			defer wg.Done()
+
+		}(raffleType)
+	}
+	wg.Wait()
 
 	return false
 }
@@ -84,79 +94,76 @@ func (p *Profile) Monitor(client *discord.Client, raffleTypes []RaffleType) {
 }
 
 // fetchRaffles fetches raffle EPs
-func (p *Profile) fetchRaffles(raffleUrl string) error {
-	retries := 0
-	for {
+func (p *Profile) fetchRaffles(raffleUrl string) ([]string, error) {
 
-		uri, err := url.Parse(raffleUrl)
-		if err != nil {
-			return err
+	raffleURL, err := url.Parse(raffleUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	req := &http.Request{
+		Method: http.MethodGet,
+		URL:    raffleURL,
+		Header: http.Header{
+			"Authority":                 {"www.premint.xyz"},
+			"Accept":                    {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"},
+			"Accept-Language":           {"en-US,en;q=0.9,fr-FR;q=0.8,fr;q=0.7"},
+			"Cache-Control":             {"max-age=0"},
+			"Cookie":                    {p.getCookieHeader()},
+			"Referer":                   {"https://www.premint.xyz/collectors/explore/"},
+			"Sec-Ch-Ua":                 {"\"Google Chrome\";v=\"105\", \"Not)A;Brand\";v=\"8\", \"Chromium\";v=\"105\""},
+			"Sec-Ch-Ua-Mobile":          {"?0"},
+			"Sec-Fetch-Platform":        {"\"macOS\""},
+			"Sec-Fetch-Dest":            {"document"},
+			"Sec-Fetch-Mode":            {"navigate"},
+			"Sec-Fetch-Site":            {"same-origin"},
+			"Sec-Fetch-User":            {"?1"},
+			"Upgrade-Insecure-Requests": {"1"},
+			"User-Agent":                {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"},
+		},
+	}
+
+	resp, err := p.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != 200 {
+		if resp.StatusCode == 429 {
+			return nil, RateLimited
 		}
-
-		req := &http.Request{
-			Method: http.MethodGet,
-			URL:    uri,
-			Header: http.Header{
-				"Authority":                 {"www.premint.xyz"},
-				"Accept":                    {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"},
-				"Accept-Language":           {"en-US,en;q=0.9,fr-FR;q=0.8,fr;q=0.7"},
-				"Cache-Control":             {"max-age=0"},
-				"Cookie":                    {p.getCookieHeader()},
-				"Referer":                   {"https://www.premint.xyz/collectors/explore/"},
-				"Sec-Ch-Ua":                 {"\"Google Chrome\";v=\"105\", \"Not)A;Brand\";v=\"8\", \"Chromium\";v=\"105\""},
-				"Sec-Ch-Ua-Mobile":          {"?0"},
-				"Sec-Fetch-Platform":        {"\"macOS\""},
-				"Sec-Fetch-Dest":            {"document"},
-				"Sec-Fetch-Mode":            {"navigate"},
-				"Sec-Fetch-Site":            {"same-origin"},
-				"Sec-Fetch-User":            {"?1"},
-				"Upgrade-Insecure-Requests": {"1"},
-				"User-Agent":                {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"},
-			},
+		retries++
+		if retries >= 5 {
+			return maxRetriesReached
 		}
+		logger.LogError(moduleName, fmt.Errorf("[%s] Fetching Raffle %d/5", resp.Status, retries))
+		continue
+	}
 
-		resp, err := p.Client.Do(req)
-		if err != nil {
-			continue
-		}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		continue
+	}
 
-		if resp.StatusCode != 200 {
-			if resp.StatusCode == 429 {
-				return RateLimited
-			}
-			retries++
-			if retries >= 5 {
-				return maxRetriesReached
-			}
-			logger.LogError(moduleName, fmt.Errorf("[%s] Fetching Raffle %d/5", resp.Status, retries))
-			continue
-		}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+	if err != nil {
+		continue
+	}
 
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			continue
-		}
+	var raffles map[string]string
+	doc.Find("a[href]").Each(func(i int, s *goquery.Selection) {
+		attr, _ := s.Attr("href")
+		raffles[attr] = attr
+	})
 
-		doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
-		if err != nil {
-			continue
-		}
-
-		var raffles map[string]string
-		doc.Find("a[href]").Each(func(i int, s *goquery.Selection) {
-			attr, _ := s.Attr("href")
-			raffles[attr] = attr
-		})
-
-		filteredRafflesUrl := filter(raffles)
+	return filter(raffles), nil
+	/*
 		for _, Url := range filteredRafflesUrl {
 			if err = p.do(Url); err != nil {
 				logger.LogError(moduleName, err)
 			}
 		}
-
-		return nil
-	}
+	*/
 }
 
 func (p *Profile) do(URL string) error {
@@ -460,9 +467,9 @@ func (t *Webhook) updateIfNil() {
 	}
 }
 
-func filter(slice map[string]string) (filteredSlice []string) {
+func (s *Settings) filter(slice map[string]string) (filteredSlice []string) {
 	for _, value := range slice {
-		ok := checkKeywords(value)
+		ok := s.verifyKeyword(value)
 		if ok {
 			filteredSlice = append(filteredSlice, value)
 		}
@@ -470,7 +477,8 @@ func filter(slice map[string]string) (filteredSlice []string) {
 	return filteredSlice
 }
 
-func checkKeywords(word string) bool {
+// verifyKeyword verifies if the account is logged in by using a list of URLs.
+func (s *Settings) verifyKeyword(word string) bool {
 	bannedKeywords := []string{
 		"#",
 		"https://www.premint.xyz/creators/",
@@ -488,7 +496,8 @@ func checkKeywords(word string) bool {
 	}
 
 	for _, keyword := range bannedKeywords {
-		if strings.Contains(word, "") || word == keyword {
+		if word == keyword {
+			s.Profile.isLoggedIn = false
 			return false
 		}
 	}
@@ -496,9 +505,7 @@ func checkKeywords(word string) bool {
 	return true
 }
 
-func (t *Webhook) checkClosed() error {
-	if strings.Contains(t.document.Text(), "This list is no longer accepting entries") {
-		return errors.New("raffle closed")
-	}
-	return nil
+// isClosed verifies if the raffle does accept new entries.
+func (t *Webhook) isClosed() bool {
+	return strings.Contains(t.document.Text(), "This list is no longer accepting entries")
 }
