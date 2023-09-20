@@ -8,29 +8,29 @@ An NFT monitoring toolkit for tracking NFT drops, sales, listings, and more.
 
 ## 🚨 Disclaimer
 This project is WIP!
-Note that these monitors have been made months ago and may not be working right now due to site changes. Currently re-writing everything.
+Some stuff is broken & is being reworked frequently, i will update the readme when this project is done
 
 ## Features
 
 - [x] Etherscan Monitoring
   - [x] New Verified Contracts
 - [x] ExchangeArt Monitoring
-  - [x] New Drops by Artist
+  - [ ] New Drops by Artist (need to update to gql)
 - [x] LMNFT Monitoring Top Drops
   - [x] Solana
-  - [ ] Polygon
-  - [ ] Ethereum
-  - [ ] Binance
-  - [ ] Aptos
-  - [ ] Avalanche
-  - [ ] Fantom
-  - [ ] Stacks
+  - [x] Polygon
+  - [x] Ethereum
+  - [x] Binance
+  - [x] Aptos
+  - [x] Avalanche
+  - [x] Fantom
+  - [x] Stacks
 - [x] OpenSea Monitoring
   - [x] Sales
   - [x] Listings
 - [x] Premint Monitoring
-  - [x] Hype Weekly/Daily Raffles (Premint NFT Required)
-- [ ] BRC20 Unisat
+  - [ ] Hype Weekly/Daily Raffles (Premint NFT Required) – (needs fixes)
+- [x] BRC20 Unisat
 
 ## Getting Started
 
