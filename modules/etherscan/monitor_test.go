@@ -29,7 +29,7 @@ func TestMonitorVerifiedContracts(t *testing.T) {
 
 	contract := ParseHTML(goquery.NewDocumentFromReader(strings.NewReader(string(body))))
 	if contract.Name == "" || contract.Address == "" {
-		assert.Error(t, fmt.Errorf("expected non empty contract name & address but got [%s – %s] ", contract.Name, contract.Address))
+		assert.Error(t, fmt.Errorf("expected non empty contract name & address"))
 	}
 
 	assert.NoError(t, nil)
