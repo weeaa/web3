@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/charmbracelet/log v0.2.2
-	github.com/gagliardetto/solana-go v1.8.2
+	github.com/gagliardetto/solana-go v1.8.4
 )
 
 require (
