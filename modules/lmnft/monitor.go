@@ -39,15 +39,16 @@ func (s *Settings) StartMonitor(networks []Network) {
 	}()
 }
 
-// monitorDrops monitors SOL Hype Mints by default.
-// If you want to monitor non SOL Mints, switch the "Solana" from the
-// payload to the network you want to monitor.
+// monitorDrops monitors SOL Hype Mints that are minted above 60%
+// & have a minimum of 100 mints.
 func (s *Settings) monitorDrops(networks []Network) bool {
 
 	resp, err := doRequest(networks)
 	if err != nil {
 		return false
 	}
+
+	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		logger.LogError(moduleName, fmt.Errorf("invalid response status: %s", resp.Status))
@@ -59,27 +60,15 @@ func (s *Settings) monitorDrops(networks []Network) bool {
 		return false
 	}
 
-	var res resLaunchMyNFT
-	var t Webhook
-	if err = json.NewDecoder(bytes.NewBuffer(body)).Decode(&res); err != nil {
+	var response resLaunchMyNFT
+	if err = json.Unmarshal(body, &response); err != nil {
 		return false
 	}
 
-	if err = resp.Body.Close(); err != nil {
-		return false
-	}
+	for i := 0; i < len(response.Results); i++ {
+		drop := &Release{}
 
-	for i := 0; i < len(res.Results); i++ {
-		var drop Release
-
-		drop.Name = res.Results[i].Hits[i].Document.CollectionName
-		drop.Description = res.Results[i].Hits[i].Document.Description
-		drop.Link = "https://www.launchmynft.io/collections/" + res.Results[i].Hits[i].Document.Owner + "/" + res.Results[i].Hits[i].Document.ID
-		drop.Image = res.Results[i].Hits[i].Document.CollectionCoverURL
-		drop.Fraction = res.Results[i].Hits[i].Document.FractionMinted * 100
-
-		var contract, discordServer, twitterAccount, secondary string
-		switch res.Results[i].Hits[i].Document.Type {
+		switch response.Results[i].Hits[i].Document.Type {
 		case string(Solana):
 			var info resSolana
 
@@ -89,76 +78,94 @@ func (s *Settings) monitorDrops(networks []Network) bool {
 				return false
 			}
 
-			contract = info.Props.PageProps.Collection.NewCandyMachineAccountID
-			discordServer = info.Props.PageProps.Collection.Discord
-			twitterAccount = info.Props.PageProps.Collection.Twitter
+			drop.Contract = info.Props.PageProps.Collection.NewCandyMachineAccountID
+			drop.Discord = info.Props.PageProps.Collection.Discord
+			drop.Twitter = info.Props.PageProps.Collection.Twitter
 
-			secondary = fmt.Sprintf("[Secondary Market](https://hyperspace.xyz/collection/%s", info.Props.PageProps.Collection.NewCandyMachineAccountID)
-			if twitterAccount == "" {
-				twitterAccount = "no account :("
-			} else if discordServer == "" {
-				discordServer = "no server :("
-			} else {
-				discordServer = "[Server](https://discord.gg/" + discordServer + ")"
-				twitterAccount = "[Account](https://twitter.com/" + twitterAccount + ")"
-			}
-			//todo add support for other platforms
 		case string(Polygon):
 			var info resPolygon
 
-			info, err = scrapeInformation[resPolygon](t.MintLink)
+			info, err = scrapeInformation[resPolygon](drop.Link)
 			if err != nil {
 				logger.LogError(moduleName, err)
 				return false
 			}
+
+			drop.Contract = info.PageProps.Collection.Address
+			drop.Discord = info.PageProps.Collection.Discord
+			drop.Twitter = info.PageProps.Collection.Twitter
+
 		case string(Ethereum):
 			var info resEthereum
 
-			info, err = scrapeInformation[resEthereum](t.MintLink)
+			info, err = scrapeInformation[resEthereum](drop.Link)
 			if err != nil {
 				logger.LogError(moduleName, err)
 				return false
 			}
+
+			drop.Contract = info.Props.PageProps.Collection.Address
+			drop.Discord = info.Props.PageProps.Collection.Discord
+			drop.Twitter = info.Props.PageProps.Collection.Twitter
+
 		case string(Binance):
 			var info resBinance
 
-			info, err = scrapeInformation[resBinance](t.MintLink)
+			info, err = scrapeInformation[resBinance](drop.Link)
 			if err != nil {
 				logger.LogError(moduleName, err)
 				return false
 			}
+
+			drop.Contract = info.Props.PageProps.Collection.Address
+			//drop.Twitter = info.Props.PageProps.Collection.Twitter
+
 		case string(Aptos):
 			var info resAptos
 
-			info, err = scrapeInformation[resAptos](t.MintLink)
+			info, err = scrapeInformation[resAptos](drop.Link)
 			if err != nil {
 				logger.LogError(moduleName, err)
 				return false
 			}
+
+			drop.Contract = info.PageProps.Collection.Cm
+			drop.Discord = info.PageProps.Collection.Discord
+			drop.Twitter = info.PageProps.Collection.Twitter
+
 		case string(Avalanche):
 			var info resAvalanche
 
-			info, err = scrapeInformation[resAvalanche](t.MintLink)
+			info, err = scrapeInformation[resAvalanche](drop.Link)
 			if err != nil {
 				logger.LogError(moduleName, err)
 				return false
 			}
+
+			drop.Contract = info.Props.PageProps.Collection.Address
+			drop.Twitter = info.Props.PageProps.Collection.Twitter
 		case string(Fantom):
 			var info resFantom
 
-			info, err = scrapeInformation[resFantom](t.MintLink)
+			info, err = scrapeInformation[resFantom](drop.Link)
 			if err != nil {
 				logger.LogError(moduleName, err)
 				return false
 			}
+
+			drop.Contract = info.Props.PageProps.Collection.Address
+			drop.Twitter = info.Props.PageProps.Collection.Twitter
 		case string(Stacks):
 			var info resStacks
 
-			info, err = scrapeInformation[resStacks](t.MintLink)
+			info, err = scrapeInformation[resStacks](drop.Link)
 			if err != nil {
 				logger.LogError(moduleName, err)
 				return false
 			}
+
+			drop.Contract = info.Props.PageProps.Collection.Address
+
 		default:
 			logger.LogError(moduleName, errors.New("unknown network"))
 			continue
@@ -167,128 +174,23 @@ func (s *Settings) monitorDrops(networks []Network) bool {
 		s.Handler.M.Set(drop.Name, drop.TotalMinted)
 
 		if _, ok := s.Handler.MCopy.Get(drop.Name); ok {
-
 			continue
 		}
 
+		drop.populateData(response, i)
+		drop.handleSocials()
 		if drop.Fraction >= 6 && drop.TotalMinted >= 100 && drop.Contract != "" {
 			if err = s.sendDiscordNotification(drop); err != nil {
 				logger.LogError(moduleName, err)
-				return false
 			}
 		} else {
-			logger.LogInfo(moduleName, fmt.Sprintf("🐙 collection progress too low: %s", res.Results[i].Hits[i].Document.CollectionName))
+			logger.LogInfo(moduleName, fmt.Sprintf("🐙 collection progress too low: %s", drop.Name))
 		}
 
 		s.Handler.Copy()
 	}
 
 	return false
-}
-
-func handleNetworkParsing(network Network, webhook *discord.Webhook, mintLink string) {
-	var err error
-
-	embed := webhook.Embeds[0]
-	embedsField := embed.Fields
-
-	switch network {
-	case Solana:
-		var info resSolana
-
-		info, err = scrapeInformation[resSolana](mintLink)
-		if err != nil {
-			logger.LogError(moduleName, err)
-			return
-		}
-
-		if info.Props.PageProps.Collection.Discord != "" {
-			embedsField[4].Name = "[Server](https://discord.gg/" + info.Props.PageProps.Collection.Discord + ")"
-		} else {
-
-		}
-		embedsField[3].Name = "Twitter"
-		embedsField[3].Value = twitterAccount
-
-		embedsField[4].Name = "Discord"
-		embedsField[4].Name = "[Server](https://discord.gg/" + info.Props.PageProps.Collection.Discord + ")"
-
-		embedsField[5].Name = "Secondary"
-		embedsField[5].Value = fmt.Sprintf("[Secondary Market](https://hyperspace.xyz/collection/%s", info.Props.PageProps.Collection.NewCandyMachineAccountID)
-
-		contract = info.Props.PageProps.Collection.NewCandyMachineAccountID
-		discordServer = info.Props.PageProps.Collection.Discord
-		twitterAccount = info.Props.PageProps.Collection.Twitter
-
-		if twitterAccount == "" {
-			twitterAccount = "no account :("
-		} else if discordServer == "" {
-			discordServer = "no server :("
-		} else {
-			discordServer = "[Server](https://discord.gg/" + discordServer + ")"
-			twitterAccount = "[Account](https://twitter.com/" + twitterAccount + ")"
-		}
-		//todo add support for other platforms
-	case Polygon:
-		var info resPolygon
-
-		info, err = scrapeInformation[resPolygon](t.MintLink)
-		if err != nil {
-			logger.LogError(moduleName, err)
-			return false
-		}
-	case Ethereum:
-		var info resEthereum
-
-		info, err = scrapeInformation[resEthereum](t.MintLink)
-		if err != nil {
-			logger.LogError(moduleName, err)
-			return false
-		}
-	case Binance:
-		var info resBinance
-
-		info, err = scrapeInformation[resBinance](t.MintLink)
-		if err != nil {
-			logger.LogError(moduleName, err)
-			return false
-		}
-	case Aptos:
-		var info resAptos
-
-		info, err = scrapeInformation[resAptos](t.MintLink)
-		if err != nil {
-			logger.LogError(moduleName, err)
-			return false
-		}
-	case Avalanche:
-		var info resAvalanche
-
-		info, err = scrapeInformation[resAvalanche](t.MintLink)
-		if err != nil {
-			logger.LogError(moduleName, err)
-			return false
-		}
-	case Fantom:
-		var info resFantom
-
-		info, err = scrapeInformation[resFantom](t.MintLink)
-		if err != nil {
-			logger.LogError(moduleName, err)
-			return false
-		}
-	case Stacks:
-		var info resStacks
-
-		info, err = scrapeInformation[resStacks](t.MintLink)
-		if err != nil {
-			logger.LogError(moduleName, err)
-			return false
-		}
-	default:
-		logger.LogError(moduleName, errors.New("unknown network"))
-		continue
-	}
 }
 
 // scrapeInformation scrapes information from a collection page and
@@ -407,7 +309,7 @@ func doRequest(networks []Network) (*http.Response, error) {
 	return http.DefaultClient.Do(req)
 }
 
-func (s *Settings) sendDiscordNotification(drop Release) error {
+func (s *Settings) sendDiscordNotification(drop *Release) error {
 	return s.Discord.SendNotification(discord.Webhook{
 		Username:  s.Discord.ProfileName,
 		AvatarUrl: s.Discord.AvatarImage,
@@ -460,4 +362,23 @@ func (s *Settings) sendDiscordNotification(drop Release) error {
 			},
 		},
 	}, s.Discord.Webhook)
+}
+
+func (drop *Release) handleSocials() {
+	if drop.Twitter == "" {
+		drop.Twitter = "no account :("
+	} else if drop.Discord == "" {
+		drop.Discord = "no server :("
+	} else {
+		drop.Discord = "[Server](https://discord.gg/" + drop.Discord + ")"
+		drop.Twitter = "[Account](https://twitter.com/" + drop.Twitter + ")"
+	}
+}
+
+func (drop *Release) populateData(res resLaunchMyNFT, i int) {
+	drop.Name = res.Results[i].Hits[i].Document.CollectionName
+	drop.Description = res.Results[i].Hits[i].Document.Description
+	drop.Link = "https://www.launchmynft.io/collections/" + res.Results[i].Hits[i].Document.Owner + "/" + res.Results[i].Hits[i].Document.ID
+	drop.Image = res.Results[i].Hits[i].Document.CollectionCoverURL
+	drop.Fraction = res.Results[i].Hits[i].Document.FractionMinted * 100
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/weeaa/nft/handler"
 	"github.com/weeaa/nft/pkg/logger"
 	"github.com/weeaa/nft/pkg/tls"
+	"github.com/weeaa/nft/pkg/utils"
 	"io"
 	"net/url"
 	"sort"
@@ -95,10 +96,12 @@ func (s *Settings) monitorDrops() bool {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		if ok := s.handleRateLimit(resp.StatusCode); !ok {
-			return ok
+		logger.LogInfo(moduleName, fmt.Sprintf("unexpected response status: %s", resp.Status))
+		if s.RotateProxyOnBan && resp.StatusCode == http.StatusTooManyRequests {
+			if ok := tls.HandleRateLimit(s.Client, s.ProxyList, moduleName); !ok {
+				return ok
+			}
 		}
-		logger.LogInfo(moduleName, fmt.Sprintf("unexpected response status: monitorDrops: %s", resp.Status))
 		return false
 	}
 
@@ -378,7 +381,7 @@ func prettyPrintHolders(holders map[int]map[string]string) (string, string) {
 
 	for _, key := range keys {
 		holder := holders[key]
-		address := fmt.Sprintf("[%s](https://mempool.space/address/%s)", extractFirstAndLastFourLetters(holder["address"]), holder["address"])
+		address := fmt.Sprintf("[%s](https://mempool.space/address/%s)", utils.FirstLastFour(holder["address"]), holder["address"])
 		balance := fmt.Sprintf("%s (%s%%/spl)", holder["balance"], holder["percentage"])
 
 		addressesBuilder.WriteString(address + "\n")
@@ -389,10 +392,6 @@ func prettyPrintHolders(holders map[int]map[string]string) (string, string) {
 	balances := balancesBuilder.String()
 
 	return names, balances
-}
-
-func extractFirstAndLastFourLetters(input string) string {
-	return fmt.Sprintf("%s...%s", input[:4], input[len(input)-4:])
 }
 
 func (s *Settings) handleRateLimit(respStatus int) bool {

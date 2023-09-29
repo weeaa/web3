@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	moduleName = "LaunchMyNFT"
-	retryDelay = 2500 * time.Millisecond
+	moduleName        = "LaunchMyNFT"
+	DefaultRetryDelay = 2500 * time.Millisecond
 )
 
 type Network string
@@ -23,6 +23,7 @@ const (
 	Avalanche Network = "Avalanche"
 	Fantom    Network = "Fantom"
 	Stacks    Network = "Stacks"
+	Sui       Network = "Sui"
 )
 
 type Settings struct {
@@ -167,62 +168,85 @@ type resSolana struct {
 }
 
 type resEthereum struct {
-	PageProps struct {
-		Collection struct {
-			WhitelistCost string  `json:"whitelistCost"`
-			Owner         string  `json:"owner"`
-			Cost          float64 `json:"cost"`
-			Address       string  `json:"address"`
-			Hidden        bool    `json:"hidden"`
-			Abi           []struct {
-				Inputs []struct {
-					Name         string `json:"name"`
-					InternalType string `json:"internalType"`
-					Type         string `json:"type"`
-					Indexed      bool   `json:"indexed,omitempty"`
-				} `json:"inputs,omitempty"`
-				StateMutability string `json:"stateMutability,omitempty"`
-				Type            string `json:"type"`
-				Name            string `json:"name,omitempty"`
-				Anonymous       bool   `json:"anonymous,omitempty"`
-				Outputs         []struct {
-					Name         string `json:"name"`
-					InternalType string `json:"internalType"`
-					Type         string `json:"type"`
-				} `json:"outputs,omitempty"`
-			} `json:"abi"`
-			Type                string        `json:"type"`
-			TransactionHash     string        `json:"transactionHash"`
-			CollectionName      string        `json:"collectionName"`
-			ChainId             int           `json:"chainId"`
-			ContractName        string        `json:"contractName"`
-			MaxSupply           int           `json:"maxSupply"`
-			HasWhitelistMinted  []interface{} `json:"hasWhitelistMinted"`
-			Deployed            int64         `json:"deployed"`
-			SoldOut             bool          `json:"soldOut"`
-			CollectionCoverUrl  string        `json:"collectionCoverUrl"`
-			Description         string        `json:"description"`
-			Twitter             string        `json:"twitter"`
-			LaunchDate          int64         `json:"launchDate"`
-			LaunchLater         bool          `json:"launchLater"`
-			MetadataCID         string        `json:"metadataCID"`
-			IsWhitelist         bool          `json:"isWhitelist"`
-			Whitelist           []interface{} `json:"whitelist"`
-			TwitterVerified     bool          `json:"twitterVerified"`
-			CollectionBannerUrl string        `json:"collectionBannerUrl"`
-			Pos                 int           `json:"pos"`
-			Featured            bool          `json:"featured"`
-			HasSoldEnough       bool          `json:"hasSoldEnough"`
-			FractionMinted      float64       `json:"fractionMinted"`
-			LastMintedAt        int64         `json:"lastMintedAt"`
-			TotalMints          int           `json:"totalMints"`
-			MintedLast30Mins    bool          `json:"mintedLast30mins"`
-			HeartCount          int           `json:"heartCount"`
-			StartTime           interface{}   `json:"startTime"`
-		} `json:"collection"`
-		DynamicCtx interface{} `json:"dynamicCtx"`
-	} `json:"pageProps"`
-	NSSP bool `json:"__N_SSP"`
+	Props struct {
+		PageProps struct {
+			Collection struct {
+				Owner         string      `json:"owner"`
+				WhitelistCost interface{} `json:"whitelistCost"`
+				Address       string      `json:"address"`
+				Cost          string      `json:"cost"`
+				Hidden        bool        `json:"hidden"`
+				Abi           []struct {
+					Inputs []struct {
+						Indexed      bool   `json:"indexed,omitempty"`
+						Name         string `json:"name"`
+						InternalType string `json:"internalType"`
+						Type         string `json:"type"`
+						Components   []struct {
+							Name         string `json:"name"`
+							InternalType string `json:"internalType"`
+							Type         string `json:"type"`
+						} `json:"components,omitempty"`
+					} `json:"inputs"`
+					StateMutability string `json:"stateMutability,omitempty"`
+					Type            string `json:"type"`
+					Name            string `json:"name,omitempty"`
+					Anonymous       bool   `json:"anonymous,omitempty"`
+					Outputs         []struct {
+						Name         string `json:"name"`
+						InternalType string `json:"internalType"`
+						Type         string `json:"type"`
+						Components   []struct {
+							Name         string `json:"name"`
+							InternalType string `json:"internalType"`
+							Type         string `json:"type"`
+						} `json:"components,omitempty"`
+					} `json:"outputs,omitempty"`
+				} `json:"abi"`
+				Deployed            int64       `json:"deployed"`
+				Whitelist           interface{} `json:"whitelist"`
+				LaunchLater         bool        `json:"launchLater"`
+				Type                string      `json:"type"`
+				SoldOut             bool        `json:"soldOut"`
+				Version             int         `json:"version"`
+				TransactionHash     string      `json:"transactionHash"`
+				CollectionName      string      `json:"collectionName"`
+				IsWhitelist         bool        `json:"isWhitelist"`
+				ContractName        string      `json:"contractName"`
+				MetadataCID         string      `json:"metadataCID"`
+				HasWhitelistMinted  interface{} `json:"hasWhitelistMinted"`
+				ChainId             int         `json:"chainId"`
+				MaxMints            int         `json:"maxMints"`
+				MaxSupply           int         `json:"maxSupply"`
+				Twitter             string      `json:"twitter"`
+				TwitterVerified     bool        `json:"twitterVerified"`
+				CollectionBannerUrl string      `json:"collectionBannerUrl"`
+				CollectionCoverUrl  string      `json:"collectionCoverUrl"`
+				Description         string      `json:"description"`
+				Discord             string      `json:"discord"`
+				HasSoldEnough       bool        `json:"hasSoldEnough"`
+				HeartCount          int         `json:"heartCount"`
+				FractionMinted      float64     `json:"fractionMinted"`
+				LastMintedAt        int64       `json:"lastMintedAt"`
+				TotalMints          int         `json:"totalMints"`
+				MintedLast30Mins    bool        `json:"mintedLast30mins"`
+				StartTime           interface{} `json:"startTime"`
+				LaunchDate          interface{} `json:"launchDate"`
+			} `json:"collection"`
+			DynamicCtx interface{} `json:"dynamicCtx"`
+		} `json:"pageProps"`
+		NSSP bool `json:"__N_SSP"`
+	} `json:"props"`
+	Page  string `json:"page"`
+	Query struct {
+		Userid       string `json:"userid"`
+		Collectionid string `json:"collectionid"`
+	} `json:"query"`
+	BuildId      string        `json:"buildId"`
+	IsFallback   bool          `json:"isFallback"`
+	DynamicIds   []int         `json:"dynamicIds"`
+	Gssp         bool          `json:"gssp"`
+	ScriptLoader []interface{} `json:"scriptLoader"`
 }
 
 type resAptos struct {

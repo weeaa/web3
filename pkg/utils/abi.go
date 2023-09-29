@@ -14,3 +14,7 @@ func ReadABI(path string) (abi.ABI, error) {
 
 	return abi.JSON(strings.NewReader(string(file)))
 }
+
+func GetABI() {
+
+}

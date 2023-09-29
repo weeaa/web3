@@ -1,0 +1,3 @@
+package grafana
+
+func Log() {}

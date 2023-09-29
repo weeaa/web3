@@ -11,3 +11,5 @@ func SliceToPrograms(wallets []string) []solana.PublicKey {
 	}
 	return addresses
 }
+
+func LmpToSol() {}

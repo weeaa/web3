@@ -2,6 +2,7 @@ package etherscan
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/weeaa/nft/discord"
@@ -23,7 +24,8 @@ func NewClient(discordClient *discord.Client, verbose bool) *Settings {
 	}
 }
 
-// StartMonitor monitors all newest ETH Verified Contracts audited by Etherscan.
+// StartMonitor monitors all newest ETH Verified Contracts
+// audited by Etherscan.
 func (s *Settings) StartMonitor() {
 	logger.LogStartup(moduleName)
 	go func() {
@@ -53,17 +55,19 @@ func (s *Settings) monitorVerifiedContracts() bool {
 		return false
 	}
 
+	defer resp.Body.Close()
+
 	if resp.StatusCode != 200 {
+		if resp.StatusCode == 429 {
+			logger.LogError(moduleName, errors.New("rate limited"))
+			return false
+		}
 		logger.LogError(moduleName, fmt.Errorf("invalid response status: %s", resp.Status))
 		return false
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return false
-	}
-
-	if err = resp.Body.Close(); err != nil {
 		return false
 	}
 

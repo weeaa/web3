@@ -1,0 +1,3 @@
+package sentry
+
+func Log() {}

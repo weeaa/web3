@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bogdanfinn/tls-client"
+	"github.com/weeaa/nft/pkg/logger"
 	"math/rand"
 	"os"
 	"strings"
@@ -14,11 +15,9 @@ import (
 
 // New instantiates a TLS client and associates it with a user-defined proxy configuration.
 func New(proxyURL string) tls_client.HttpClient {
-	//ckJar := tls_client.NewCookieJar(nil)
 	client, err := tls_client.NewHttpClient(tls_client.NewNoopLogger(),
 		tls_client.WithClientProfile(tls_client.Chrome_112),
 		tls_client.WithTimeoutSeconds(tls_client.DefaultTimeoutSeconds),
-		//	tls_client.WithCookieJar(ckJar),
 		tls_client.WithNotFollowRedirects(),
 		tls_client.WithInsecureSkipVerify(),
 		tls_client.WithProxyUrl(NewProxy(proxyURL)),
@@ -31,12 +30,10 @@ func New(proxyURL string) tls_client.HttpClient {
 
 // NewProxyLess instantiates a TLS client configured to operate on the localhost IP address.
 func NewProxyLess() tls_client.HttpClient {
-	//ckJar := tls_client.NewCookieJar(nil)
 	client, err := tls_client.NewHttpClient(tls_client.NewNoopLogger(),
 		tls_client.WithClientProfile(tls_client.Chrome_112),
 		tls_client.WithTimeoutSeconds(tls_client.DefaultTimeoutSeconds),
 		tls_client.WithTimeoutSeconds(10),
-		//	tls_client.WithCookieJar(ckJar),
 		tls_client.WithNotFollowRedirects(),
 		tls_client.WithInsecureSkipVerify())
 	if err != nil {
@@ -45,8 +42,14 @@ func NewProxyLess() tls_client.HttpClient {
 	return client
 }
 
-func RotateProxy(client tls_client.HttpClient, proxyList []string) error {
-	return client.SetProxy(NewProxy(RandProxyFromList(proxyList)))
+// HandleRateLimit rotates the proxy of the parameter passed HTTP client.
+func HandleRateLimit(client tls_client.HttpClient, proxyList []string, moduleName string) bool {
+	if err := client.SetProxy(NewProxy(RandProxyFromList(proxyList))); err != nil {
+		logger.LogError(moduleName, fmt.Errorf("unable to rotate proxy on client: %v", err))
+		return false
+	}
+	logger.LogInfo(moduleName, "rotated proxy due to rate limit")
+	return true
 }
 
 // NewProxy parses a proxy in the correct format.

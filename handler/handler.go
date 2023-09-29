@@ -17,6 +17,7 @@ func New() *Handler {
 	}
 }
 
+// Copy is a shorter func for ForEach.
 func (h *Handler) Copy() {
 	h.M.ForEach(func(k string, v interface{}) {
 		h.MCopy.Set(k, v)
