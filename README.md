@@ -33,6 +33,12 @@ a project encompassing nft monitors, backend infrastructure and snipers. i am fr
 - [x] Premint Monitoring
   - [ ] Hype Weekly/Daily Raffles (Premint NFT Required) – (needs fixes)
 - [x] BRC20 Unisat
+- [x] Wallet Watchers
+    - [x] Ethereum
+    - [ ] Base
+    - [ ] Solana
+    - [ ] Polygon
+    - [ ] Bitcoin
 
 ## Project Setup
 i'll be updating a full guide incl .env variables this weekend :)
