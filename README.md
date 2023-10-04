@@ -1,17 +1,19 @@
-# NFT Monitors 
+# web3 project 🚨 WIP
 
-An NFT monitoring toolkit for tracking NFT drops, sales, listings, and more.
+a project encompassing nft monitors, backend infrastructure and snipers. i am frequently updating this repo 🤙🏻
 
 <div align="center">
     <img src="https://cdn.discordapp.com/attachments/689063280358064158/1139538002041897041/image.png" margin="auto" height="270"/>
 </div>
 
-## 🚨 Disclaimer
-This project is WIP!
-Some stuff is broken & is being reworked frequently, i will update the readme when this project is done
-
 ## Features
 
+- [x] Friend Tech
+    - [x] Indexer
+    - [x] Buy/Sells
+    - [x] New Users
+    - [ ] Deposits 
+    - [ ] Pending Deposits
 - [x] Etherscan Monitoring
   - [x] New Verified Contracts
 - [x] ExchangeArt Monitoring
@@ -31,10 +33,19 @@ Some stuff is broken & is being reworked frequently, i will update the readme wh
 - [x] Premint Monitoring
   - [ ] Hype Weekly/Daily Raffles (Premint NFT Required) – (needs fixes)
 - [x] BRC20 Unisat
+- [x] Wallet Watchers
+    - [x] Ethereum
+    - [ ] Base
+    - [ ] Solana
+    - [ ] Polygon
+    - [ ] Bitcoin
+
+## Project Setup
+i'll be updating a full guide incl .env variables this weekend :)
 
 ## Getting Started
 
-These instructions will guide you through setting up and running the NFT Monitors project on your local machine.
+these instructions will guide you through setting up and running the modules on your local machine.
 
 ### Prerequisites
 
@@ -49,9 +60,9 @@ $ cd my-project
 $ go get github.com/weeaa/nft
 ```
 
-### Example
+### Examples
 
-Go to `/examples` folder!
+go to `/examples` folder!
 
 ## Credits
 
