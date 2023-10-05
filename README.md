@@ -90,6 +90,15 @@ $ chmod +x ./scripts/db.sh
 $ ./scripts/db.sh
 ```
 
+## 🫶🏻 Tips
+Note that proxies are mandatory for Friend Tech New Users (off-chain stuff) as they ban you on average at the ~90th request you do on the same IP – they only ban temporarily tho. My current setup is 1k ISP and it runs perfectly, with bans being resolved in 1s as you can see on the demo. Residential proxies will be costly, I advise to have a pool of DCs or ISPs. I may add delay in future updates so run it at the pace you want.
+
+You need WSS & HTTP (commonly named nodes) to monitor on-chain, free ones work well.
+
+- [Base RPCs](https://docs.base.org/tools/node-providers/)
+
+It is also advised to run on a server if you run the Friend Tech New Users Monitor as it gets network intensive sometimes.
+
 ### Examples
 
 There are various examples which can be found in the [/examples](https://github.com/weeaa/web3/tree/main/examples) folder.
