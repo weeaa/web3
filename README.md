@@ -20,7 +20,8 @@ Should you want to reach out, please do so on Discord at **weeaa**. 🤙🏻
     - [x] Watchlist Adder
     - [x] [Sniper](https://www.friend.tech/rooms/0xe5d60f8324d472e10c4bf274dbb7371aa93034a0) (Access for FriendTech Holders only, gotta keep it competitive 🫶🏻)
 - Stars Arena
-    - [ ] thoon 🤓
+    - [ ] Monitors 🤓 (Live for my FriendTech Holders!)
+    - [ ] Sniper (Live for my FriendTech Holders!)
 - DeFi
     - Uniswap
         - [ ] V2 Swap
