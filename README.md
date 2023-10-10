@@ -1,24 +1,40 @@
-# web3 project 🚨 WIP
+# web3
 
-a project encompassing nft monitors, backend infrastructure and snipers. i am frequently updating this repo 🤙🏻
+A project encompassing NFT monitors, Backend Infra, Web3 utils and Snipers/Minters. **I am frequently updating this repo & it is WIP**.
 
-<div align="center">
-    <img src="https://cdn.discordapp.com/attachments/689063280358064158/1139538002041897041/image.png" margin="auto" height="270"/>
-</div>
+Should you want to reach out, please do so on Discord at **weeaa**. 🤙🏻
 
-## Features
+![image](https://github.com/weeaa/web3/assets/108926252/e03cf484-d00c-48df-9665-e75b6a4c94b9)
 
-- [x] Friend Tech
+## 🐰 Features
+
+- Discord Bot with Slash & Buttons features
+- Postgres Database with CRUD API
+- Friend Tech
     - [x] Indexer
-    - [x] Buy/Sells
-    - [x] New Users
-    - [ ] Deposits 
-    - [ ] Pending Deposits
-- [x] Etherscan Monitoring
+    - [x] Buy/Sells w/ filters
+    - [x] New Users w/ filters
+    - [x] Deposits w/ filters
+    - [x] Pending Deposits w/ filters
+    - [x] Invite Redeemer
+    - [x] Watchlist Adder
+    - [x] [Sniper](https://www.friend.tech/rooms/0xe5d60f8324d472e10c4bf274dbb7371aa93034a0) (Access for FriendTech Holders only, gotta keep it competitive 🫶🏻)
+- Stars Arena
+    - [ ] Monitors 🤓 (Live for my FriendTech Holders!)
+    - [ ] Sniper (Live for my FriendTech Holders!)
+- DeFi
+    - Uniswap
+        - [ ] V2 Swap
+        - [ ] V3 Swap
+        - [ ] Pair Audit
+        - [ ] Utils
+     - Raydium
+         - [ ] Swap 
+- Etherscan Monitoring
   - [x] New Verified Contracts
-- [x] ExchangeArt Monitoring
+- ExchangeArt Monitoring
   - [ ] New Drops by Artist (need to update to gql)
-- [x] LMNFT Monitoring Top Drops
+- LMNFT Monitoring Top Drops
   - [x] Solana
   - [x] Polygon
   - [x] Ethereum
@@ -27,42 +43,65 @@ a project encompassing nft monitors, backend infrastructure and snipers. i am fr
   - [x] Avalanche
   - [x] Fantom
   - [x] Stacks
-- [x] OpenSea Monitoring
+- OpenSea Monitoring
   - [x] Sales
   - [x] Listings
-- [x] Premint Monitoring
+- Premint Monitoring
   - [ ] Hype Weekly/Daily Raffles (Premint NFT Required) – (needs fixes)
-- [x] BRC20 Unisat
-- [x] Wallet Watchers
-    - [x] Ethereum
-    - [ ] Base
+- Bitcoin
+  - [x] Unisat BRC20 Hype Mint Monitor
+  - [x] Fees Monitor
+  - [ ] Unisat BRC20 Minter (thoon)
+- Wallet Watchers
+    - [ ] Ethereum (thoon)
+    - [ ] Base (thoon)
     - [ ] Solana
     - [ ] Polygon
-    - [ ] Bitcoin
+    - [ ] Bitcoin (thoon)
+- [x] Twitter Scraper
 
-## Project Setup
-i'll be updating a full guide incl .env variables this weekend :)
+## 👀 Demo
+Below is a demo of our Friend Tech monitor running for Machi, where we had a large pool of new users who hadn't deposited ETH at that time. It's running on localhost, hence the latency. (It is normal for the response status to be 404)
 
-## Getting Started
+https://github.com/weeaa/web3/assets/108926252/3e997152-29af-4bfb-93db-ee217a22180b
 
-these instructions will guide you through setting up and running the modules on your local machine.
+## ⚒️ Project Setup
 
-### Prerequisites
+Here is how your `.env` file should be looking like, you can omit `NODE_WSS_URL` & `NODE_HTTP_URL`.
 
-- GoLang 1.20 or later
+```ini
+# Not Mandatory
+NODE_WSS_URL=
+NODE_HTTP_URL=
+# API (Mandatory)
+BASIC_USERNAME=email@gmail.com
+BASIC_PASSWORD=nYp@SsWW0rD
+# END
+BOT_TOKEN=discordBotToken
+PSQL_PORT=
+PSQL_USERNAME=
+PSQL_PASSWORD=
+PSQL_DB_NAME=
+```
 
-### Usage
-
-1. Clone the repository:
+In the `scripts` folder, you may find a `db.sh` bash script which will create a table and a database upon request. Follow instructions below.
 
 ```bash
-$ cd my-project
-$ go get github.com/weeaa/nft
+$ chmod +x ./scripts/db.sh
+$ ./scripts/db.sh
 ```
+
+## 🫶🏻 Tips
+- Note that proxies are mandatory for Friend Tech New Users (off-chain stuff, if ran at high speed will need proxies for FT) as they ban you on average at the ~90th request you do on the same IP – they only ban temporarily tho. My current setup is 1k ISP and it runs perfectly, with bans being resolved in 1s as you can see on the demo. Residential proxies will be costly, I advise to have a pool of DCs or ISPs. I may add delay in future updates so run it at the pace you want.
+
+- You need WSS & HTTP RPCs (commonly named nodes) to monitor on-chain, free ones work well.
+    - [Base RPCs](https://docs.base.org/tools/node-providers/)
+
+- It is advised to run on a server if you run the Friend Tech New Users Monitor as it gets network intensive sometimes.
 
 ### Examples
 
-go to `/examples` folder!
+There are various examples which can be found in the [/examples](https://github.com/weeaa/web3/tree/main/examples) folder.
 
 ## Credits
 
