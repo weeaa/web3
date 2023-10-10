@@ -8,7 +8,7 @@ import (
 	"github.com/bogdanfinn/fhttp"
 	"github.com/bogdanfinn/tls-client"
 	"github.com/weeaa/nft/discord"
-	"github.com/weeaa/nft/handler"
+	"github.com/weeaa/nft/pkg/handler"
 	"github.com/weeaa/nft/pkg/logger"
 	"github.com/weeaa/nft/pkg/tls"
 	"github.com/weeaa/nft/pkg/utils"

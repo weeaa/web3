@@ -6,7 +6,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	http "github.com/bogdanfinn/fhttp"
 	"github.com/weeaa/nft/discord"
-	"github.com/weeaa/nft/handler"
+	"github.com/weeaa/nft/pkg/handler"
 	"github.com/weeaa/nft/pkg/logger"
 	"golang.org/x/sync/errgroup"
 	"io"

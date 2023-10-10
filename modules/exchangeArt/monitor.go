@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/gagliardetto/solana-go"
 	"github.com/weeaa/nft/discord"
-	"github.com/weeaa/nft/handler"
+	"github.com/weeaa/nft/pkg/handler"
 	"github.com/weeaa/nft/pkg/logger"
 	"io"
 	"math/big"

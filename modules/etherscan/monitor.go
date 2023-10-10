@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/weeaa/nft/discord"
-	"github.com/weeaa/nft/handler"
+	"github.com/weeaa/nft/pkg/handler"
 	"github.com/weeaa/nft/pkg/logger"
 	"io"
 	"net/http"

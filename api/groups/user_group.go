@@ -8,9 +8,9 @@ import (
 func InitUserRoutes(router *gin.RouterGroup, controller *controllers.UserController) {
 	user := router.Group("/user")
 	{
-		user.GET("/", controller.GetUser)
-		user.PUT("/", controller.UpdateUser)
-		user.POST("/", controller.InsertUser)
-		user.DELETE("/", controller.RemoveUser)
+		user.GET("", controller.Get)
+		user.PUT("", controller.Update)
+		user.POST("", controller.Insert)
+		user.DELETE("", controller.Remove)
 	}
 }

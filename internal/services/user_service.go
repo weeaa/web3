@@ -1,7 +1,7 @@
 package services
 
 import (
-	"github.com/weeaa/nft/db"
+	"github.com/weeaa/nft/database/db"
 )
 
 type UserService struct {

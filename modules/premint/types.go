@@ -6,7 +6,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	tls_client "github.com/bogdanfinn/tls-client"
 	"github.com/weeaa/nft/discord"
-	"github.com/weeaa/nft/handler"
+	"github.com/weeaa/nft/pkg/handler"
 )
 
 const (

@@ -8,7 +8,7 @@ import (
 	"github.com/foundVanting/opensea-stream-go/opensea"
 	"github.com/foundVanting/opensea-stream-go/types"
 	"github.com/weeaa/nft/discord"
-	"github.com/weeaa/nft/handler"
+	"github.com/weeaa/nft/pkg/handler"
 	"github.com/weeaa/nft/pkg/logger"
 	"io"
 	"math/big"

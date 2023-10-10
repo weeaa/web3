@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/weeaa/nft/discord"
-	"github.com/weeaa/nft/handler"
+	"github.com/weeaa/nft/pkg/handler"
 )
 
 func NewClient(discordClient *discord.Client, verbose bool, nodeUrl string, monitorParams MonitorParams) (*Settings, error) {

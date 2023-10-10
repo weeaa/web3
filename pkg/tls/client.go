@@ -52,6 +52,10 @@ func HandleRateLimit(client tls_client.HttpClient, proxyList []string, moduleNam
 	return true
 }
 
+func RotateProxy(client tls_client.HttpClient, proxyList []string) error {
+	return client.SetProxy(NewProxy(RandProxyFromList(proxyList)))
+}
+
 // NewProxy parses a proxy in the correct format.
 func NewProxy(unparsedProxy string) string {
 	var proxy string

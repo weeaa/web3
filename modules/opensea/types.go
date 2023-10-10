@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/foundVanting/opensea-stream-go/opensea"
 	"github.com/weeaa/nft/discord"
-	"github.com/weeaa/nft/handler"
+	"github.com/weeaa/nft/pkg/handler"
 	"math/big"
 )
 

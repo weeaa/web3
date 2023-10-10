@@ -5,10 +5,9 @@ import (
 	tls_client "github.com/bogdanfinn/tls-client"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/weeaa/nft/db"
+	"github.com/weeaa/nft/database/db"
 	"github.com/weeaa/nft/discord"
-	"github.com/weeaa/nft/handler"
-	"github.com/weeaa/nft/pkg/utils"
+	"github.com/weeaa/nft/pkg/handler"
 )
 
 const moduleName = "Friend Tech"
@@ -17,10 +16,6 @@ const FRIEND_TECH_CONTRACT_V1 = "0xcf205808ed36593aa40a44f10c7f7c2f67d4a4d4"
 const (
 	sellMethod = "0xb51d0534"
 	buyMethod  = "0x6945b123"
-)
-
-const (
-	indexer = "Friend Tech Indexer"
 )
 
 const (
@@ -38,8 +33,8 @@ type Settings struct {
 	HTTPClient *ethclient.Client
 	Verbose    bool
 	ABI        abi.ABI
-	Sniper     Sniper
-	DB         *db.DB
+	//Sniper     Sniper
+	DB *db.DB
 
 	LatestUserID  int
 	isLatestFound bool
@@ -55,13 +50,6 @@ type Indexer struct {
 	UserCounter int
 	ProxyList   []string
 	Client      tls_client.HttpClient
-}
-
-type Sniper struct {
-	PrivateKey string
-	HttpClient tls_client.HttpClient
-	Wallet     *utils.Wallet
-	Client     *ethclient.Client
 }
 
 type Account struct {

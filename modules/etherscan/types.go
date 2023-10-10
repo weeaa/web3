@@ -3,7 +3,7 @@ package etherscan
 import (
 	"context"
 	"github.com/weeaa/nft/discord"
-	"github.com/weeaa/nft/handler"
+	"github.com/weeaa/nft/pkg/handler"
 )
 
 const (

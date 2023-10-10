@@ -7,19 +7,11 @@ import (
 	http "github.com/bogdanfinn/fhttp"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/goccy/go-json"
-	"github.com/weeaa/nft/db"
-	"github.com/weeaa/nft/modules/twitter"
-	"github.com/weeaa/nft/pkg/files"
 	"github.com/weeaa/nft/pkg/logger"
-	"github.com/weeaa/nft/pkg/tls"
 	"github.com/weeaa/nft/pkg/utils"
-	"io"
 	"math/big"
 	"net/url"
-	"strconv"
 	"strings"
-	"time"
 )
 
 func (s *Settings) MonitorFriendTechLogs() {
@@ -59,43 +51,8 @@ func (s *Settings) MonitorFriendTechLogs() {
 				logger.LogError(moduleName, err)
 				continue
 			}
-
-			/*
-				// todo improve code
-				{
-					go func() {
-						ok := isNewUser(hex.EncodeToString(tx.Data()), sender.String())
-						if ok {
-							fmt.Println("TRUE", sender.String())
-						}
-					}()
-
-					go func() {
-
-					}()
-				}
-			*/
-
 		}
 	}
-}
-
-func (s *Settings) StartIndexer() {
-	logger.LogStartup(indexer)
-	go func() {
-		var latestUserID int
-		defer func() {
-			if r := recover(); r != nil {
-				logger.LogError(indexer, fmt.Errorf(""))
-				s.StartIndexer()
-			}
-		}()
-
-		s.StartIndexer()
-		for !s.getLatestUser(latestUserID) {
-
-		}
-	}()
 }
 
 // getLatestUser will be used to determine what is the latest ID active.
@@ -173,94 +130,6 @@ func (s *Settings) getLatestUser(startUserID int) bool {
 	return false
 }
 
-// Index stores every user
-// from the platform in a postgres database.
-func (s *Indexer) Index() {
-	for {
-		req := &http.Request{
-			Method: http.MethodGet,
-			URL:    &url.URL{Scheme: "https", Host: prodBaseApi, Path: "/users/by-id/" + fmt.Sprint(s.UserCounter)},
-			Host:   prodBaseApi,
-			Header: http.Header{},
-		}
-
-		resp, err := s.Client.Do(req)
-		if err != nil {
-			logger.LogError(indexer, err)
-			continue
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			if resp.StatusCode == http.StatusNotFound {
-				logger.LogError(indexer, fmt.Errorf("status not found for id: %d", s.UserCounter))
-				continue
-			} else if resp.StatusCode == http.StatusTooManyRequests {
-				tls.HandleRateLimit(s.Client, s.ProxyList, indexer)
-				continue
-			}
-			logger.LogError(indexer, fmt.Errorf("status %s for id: %d", resp.Status, s.UserCounter))
-		}
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			logger.LogError(indexer, err)
-			continue
-		}
-
-		var u UserInformation
-		if err = json.Unmarshal(body, &u); err != nil {
-			logger.LogError(indexer, err)
-			continue
-		}
-
-		if err = resp.Body.Close(); err != nil {
-			logger.LogError(indexer, err)
-			continue
-		}
-
-		var nitter twitter.NitterResponse
-		var importance Importance
-
-		{
-			nitter, err = twitter.FetchNitter(u.TwitterName)
-			if err != nil {
-				logger.LogError(indexer, err)
-				continue
-			}
-
-			followers, _ := strconv.Atoi(nitter.Followers)
-
-			importance, err = assertImportance(followers, Followers)
-			if err != nil {
-				logger.LogError(indexer, err)
-				continue
-			}
-		}
-
-		if err = s.DB.InsertUser(&db.User{
-			BaseAddress:     u.Address,
-			Status:          string(importance),
-			TwitterName:     u.TwitterName,
-			TwitterUsername: u.TwitterUsername,
-			UserId:          u.Id,
-			TwitterURL:      "https://x.com/" + u.TwitterUsername,
-		}); err != nil {
-			logger.LogError(indexer, err)
-			continue
-		}
-
-		logger.LogInfo(indexer, fmt.Sprintf("inserted %s | %d", u.TwitterName, u.Id))
-
-		s.UserCounter++
-
-		if err = files.WriteJSON("latestUserID.json", []byte(fmt.Sprintf("{\n  \"id\": %d\n}", u.Id))); err != nil {
-			logger.LogError(indexer, err)
-		}
-
-		time.Sleep(2 * time.Second)
-	}
-}
-
 func (s *Settings) dispatchLog(txns types.Log) {
 	var tx *types.Transaction
 	var sender common.Address
@@ -268,6 +137,7 @@ func (s *Settings) dispatchLog(txns types.Log) {
 	var err error
 
 	_ = balance
+
 	tx, _, err = s.WSSClient.TransactionByHash(context.Background(), txns.TxHash)
 	if err != nil {
 		logger.LogError(moduleName, err)
@@ -278,7 +148,6 @@ func (s *Settings) dispatchLog(txns types.Log) {
 		logger.LogError(moduleName, err)
 	}
 
-	// get the sender's balance
 	balance, err = utils.GetEthWalletBalance(s.WSSClient, sender)
 	if err != nil {
 		logger.LogError(moduleName, err)
@@ -301,12 +170,6 @@ func (s *Settings) monitorBalance() {
 	}()
 }
 
-func (s *Settings) monitorDeposits() {
-	go func() {
-
-	}()
-}
-
 func (s *Settings) handleSell(tx *types.Transaction, sender string) error {
 	/*
 		if isSelf(hex.EncodeToString(tx.Data()), sender) {
@@ -315,7 +178,7 @@ func (s *Settings) handleSell(tx *types.Transaction, sender string) error {
 				return err
 			}
 			imp, err := assertImportance() //pass followers count
-			// do a go func that adds to the db the txn data
+			// do a go func that adds to the database the txn data
 			return s.Discord.SendNotification(buildWebhook(), "")
 		} else {
 
@@ -326,6 +189,8 @@ func (s *Settings) handleSell(tx *types.Transaction, sender string) error {
 
 func (s *Settings) handleBuy(tx *types.Transaction, sender string) {
 	if isSelf(hex.EncodeToString(tx.Data()), sender) {
+
+	} else {
 
 	}
 }

@@ -10,12 +10,13 @@ require (
 require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.13.4 // indirect
 	filippo.io/edwards25519 v1.0.0-rc.1 // indirect
-	github.com/DataDog/zstd v1.4.5 // indirect
+	github.com/DataDog/zstd v1.5.2 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/PuerkitoBio/goquery v1.8.1 // indirect
-	github.com/VictoriaMetrics/fastcache v1.6.0 // indirect
+	github.com/VictoriaMetrics/fastcache v1.10.0 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/andybalholm/cascadia v1.3.1 // indirect
+	github.com/ava-labs/avalanchego v1.10.11 // indirect
 	github.com/aybabtme/rgbterm v0.0.0-20170906152045-cc83f3b3ce59 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -24,16 +25,16 @@ require (
 	github.com/bogdanfinn/fhttp v0.5.23 // indirect
 	github.com/bogdanfinn/tls-client v1.5.0 // indirect
 	github.com/bogdanfinn/utls v1.5.16 // indirect
-	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
+	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/bwmarrin/discordgo v0.27.1 // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/charmbracelet/lipgloss v0.7.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
-	github.com/cockroachdb/errors v1.8.1 // indirect
-	github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f // indirect
+	github.com/cockroachdb/errors v1.9.1 // indirect
+	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
 	github.com/cockroachdb/pebble v0.0.0-20230906160148-46873a6a7a06 // indirect
-	github.com/cockroachdb/redact v1.0.8 // indirect
+	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/cockroachdb/sentry-go v0.6.1-cockroachdb.2 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
 	github.com/consensys/gnark-crypto v0.10.0 // indirect
@@ -43,7 +44,7 @@ require (
 	github.com/daoleno/uniswapv3-sdk v0.4.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set/v2 v2.1.0 // indirect
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
 	github.com/deepmap/oapi-codegen v1.8.2 // indirect
 	github.com/dfuse-io/logging v0.0.0-20201110202154-26697de88c79 // indirect
 	github.com/ethereum/c-kzg-4844 v0.3.1 // indirect
@@ -55,7 +56,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/gagliardetto/binary v0.7.7 // indirect
 	github.com/gagliardetto/treeout v0.1.4 // indirect
-	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff // indirect
+	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/gin-contrib/cors v1.4.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.9.1 // indirect
@@ -75,7 +76,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.3.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
@@ -101,7 +102,7 @@ require (
 	github.com/jszwec/csvutil v1.8.0 // indirect
 	github.com/klauspost/compress v1.15.15 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
-	github.com/kr/pretty v0.3.0 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/logrusorgru/aurora v2.0.3+incompatible // indirect
@@ -109,7 +110,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
+	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/pointerstructure v1.2.0 // indirect
@@ -126,13 +127,13 @@ require (
 	github.com/peterh/liner v1.1.1-0.20190123174540-a2c9a5303de7 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.12.0 // indirect
-	github.com/prometheus/client_model v0.2.1-0.20210607210712-147c58e9608a // indirect
-	github.com/prometheus/common v0.32.1 // indirect
-	github.com/prometheus/procfs v0.7.3 // indirect
+	github.com/prometheus/client_golang v1.17.0 // indirect
+	github.com/prometheus/client_model v0.4.1-0.20230718164431-9a2bf3000d16 // indirect
+	github.com/prometheus/common v0.44.0 // indirect
+	github.com/prometheus/procfs v0.11.1 // indirect
 	github.com/redis/go-redis v6.15.9+incompatible // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
-	github.com/rogpeppe/go-internal v1.8.0 // indirect
+	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
@@ -143,7 +144,7 @@ require (
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/supranational/blst v0.3.11 // indirect
-	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 // indirect
+	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a // indirect
 	github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5 // indirect
 	github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125 // indirect
 	github.com/thirdweb-dev/go-sdk v1.3.4 // indirect
@@ -165,9 +166,9 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.mongodb.org/mongo-driver v1.11.0 // indirect
 	go.opencensus.io v0.23.0 // indirect
-	go.uber.org/atomic v1.7.0 // indirect
-	go.uber.org/multierr v1.6.0 // indirect
-	go.uber.org/zap v1.21.0 // indirect
+	go.uber.org/atomic v1.10.0 // indirect
+	go.uber.org/multierr v1.8.0 // indirect
+	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.12.0 // indirect
 	golang.org/x/exp v0.0.0-20230810033253-352e893a4cad // indirect
@@ -179,7 +180,7 @@ require (
 	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.9.1 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
+	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
