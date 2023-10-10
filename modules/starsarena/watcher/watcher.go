@@ -199,7 +199,7 @@ func (w *Watcher) WatchNewUsers() bool {
 			"sec-ch-ua":          {"\"Chromium\";v=\"117\", \"Not;A=Brand\";v=\"8\""},
 			"dnt":                {"1"},
 			"sec-ch-ua-mobile":   {"?0"},
-			"authorization":      {"Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiOTMyMjRlMmEtY2RmMy00MGI1LWFhM2ItZjhlNjVhODZhZmRlIiwidHdpdHRlcklkIjoiMTI0ODM1NzAwNDM3NDA5MzgyNSIsInR3aXR0ZXJIYW5kbGUiOiJ3ZWVhX2EiLCJ0d2l0dGVyTmFtZSI6IuKAlCBlL2FjYyIsInR3aXR0ZXJQaWN0dXJlIjoiaHR0cHM6Ly9wYnMudHdpbWcuY29tL3Byb2ZpbGVfaW1hZ2VzLzE3MDY3ODAzOTAyMTAzNDcwMDgvZEpTeGpCR3Zfbm9ybWFsLmpwZyIsImFkZHJlc3MiOiIweDI0YWRkNjRhNmY3OWU1NzdhNWJlMzNlNTU1MmJhOTU2ODFhZjdhMjAifSwiaWF0IjoxNjk2NDU0MzY0LCJleHAiOjE3MDUwOTQzNjR9.FzjVg9keGEumZrXzmXkHYwQtnhgmPlnB8vUh_rkM_m6ycFZ92JUUpKYKGxe3i3-58rWgQTmWFAzo8lCi-3TnsWLTbB20hXhu5SEeiCzrfLASQrwanJUwSiy1iZgnsrLZPaciztqIyXYB8Bjtz8g92a-I95c2vCNnaDSHRXdPusoNgKIhH0Pd6vqvWeTIiT1ksrZNd9jQ4IudqALrFE2VrsIauVCK2pxircAFCiGg01O_VrVD657PdpeSF2J3Isekq3wd4TDzoSTsesuXfzRSHZn_zASkPM3xOHkC7b18A8xeMIfzVTdDVGX1ZB51il1qqRv4qs8rMq82kqGYwdrMtHB3bqwc1yX1gNXSomVjSren-bYw-wK8CTxbj-zm45hAcZk_X0JIkwyTtKXchrXkteAyuiRy2EAgCtf6qyL9JpUebvJ0pz8jmhJmBcKVdmFfXKcEXYle-533cAHxZPVUj5aj5yd7GoaAzpjvoZoJZILUE2Xm4ROt2KK2SSiFH_glFljhOzWPauevL6xWFyW3P3KKCm8yrpBXgkn7o4nKT76seZSP4mDhMLIb8JbJkmM0qr_1FSSfFbvqZqURdHDUdhEsa15B1QIYUPeLblrdlDINZxvASVuPCkXRRrkP1IZCTx1uVGwTa8DWB_B-dmPcCpk9Ts5PNlptzSebcsyBsL4"},
+			"authorization":      {"Bearer its not working anymore :>"},
 			"user-agent":         {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"},
 			"accept":             {"application/json"},
 			"referer":            {""},
