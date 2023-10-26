@@ -18,7 +18,7 @@ Should you want to reach out, please do so on Discord at **weeaa**. 🤙🏻
     - [x] Pending Deposits w/ filters
     - [x] Invite Redeemer
     - [x] Watchlist Adder
-    - [x] [Sniper](https://www.friend.tech/rooms/0xe5d60f8324d472e10c4bf274dbb7371aa93034a0) (Access for FriendTech Holders only, gotta keep it competitive 🫶🏻)
+    - [x] [Sniper](https://www.friend.tech/rooms/0xe5d60f8324d472e10c4bf274dbb7371aa93034a0)
 - Stars Arena
     - [ ] Monitors 🤓 (Live for my FriendTech Holders!)
     - [ ] Sniper (Live for my FriendTech Holders!)
@@ -49,7 +49,7 @@ Should you want to reach out, please do so on Discord at **weeaa**. 🤙🏻
 - Premint Monitoring
   - [ ] Hype Weekly/Daily Raffles (Premint NFT Required) – (needs fixes)
 - Bitcoin
-  - [x] Unisat BRC20 Hype Mint Monitor
+  - [x] Unisat BRC20 Hype Mint Monitor (Discontinued due to header encryption, cba)
   - [x] Fees Monitor
   - [ ] Unisat BRC20 Minter (thoon)
 - Wallet Watchers
