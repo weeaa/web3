@@ -2,26 +2,63 @@ package ethereum
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/weeaa/nft/database/db"
 	"github.com/weeaa/nft/discord"
-	"github.com/weeaa/nft/handler"
+	"github.com/weeaa/nft/discord/bot"
+	"github.com/weeaa/nft/pkg/handler"
+	"github.com/weeaa/nft/pkg/prometheus"
+	"github.com/weeaa/nft/pkg/safemap"
+	"math/big"
 )
 
 const moduleName = "Ethereum Wallet Watcher"
 
+type Transactions struct {
+	Addresses       []common.Address
+	Client          *ethclient.Client
+	LatestBlockChan chan *types.Block
+	Params          safemap.SafeMap[common.Address, *TransactionsParams]
+	LatestBlock     uint64
+}
+
+// TransactionsParams let you set parameters.
+type TransactionsParams struct {
+	ABI abi.ABI
+}
+
 type Settings struct {
-	Discord       *discord.Client
-	Handler       *handler.Handler
-	Verbose       bool
-	Context       context.Context
-	Client        *ethclient.Client
-	MonitorParams MonitorParams
+	PromMetrics *prometheus.PromMetrics
+
+	Bot            *bot.Bot
+	DB             *db.DB
+	Discord        *discord.Client
+	Handler        *handler.Handler
+	Verbose        bool
+	Context        context.Context
+	Client         *ethclient.Client
+	MonitorParams  MonitorParams
+	BalanceWatcher BalanceWatcher
+	Transactions   Transactions
+}
+
+type (
+	Contract string
+	Account  string
+)
+
+type BalanceWatcher struct {
+	Balances map[common.Address]*big.Int
 }
 
 type MonitorParams struct {
 	BlacklistedTokens []string
 }
 
+// DefaultList is a list of valuable traders.
 var DefaultList = []string{
 	"0x9b26f57f9989C158C66b4A175C9dd5ae128A1F2B",
 	"0x036d78c5e87E0aA07Bf61815d1efFe10C9FD5275",

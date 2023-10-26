@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package pb;
+option go_package = "./pb";
+
+service Service {
+  rpc SendMessage (stream Message) returns (stream Event);
+}
+
+message Message {
+  string message = 1;
+}
+
+message Event {
+  string event = 1;
+  string data = 2;
+}

@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	http "github.com/bogdanfinn/fhttp"
+	"github.com/bwmarrin/discordgo"
 	"github.com/weeaa/nft/discord"
+	"github.com/weeaa/nft/discord/bot"
 	"github.com/weeaa/nft/pkg/handler"
 	"github.com/weeaa/nft/pkg/logger"
+	"github.com/weeaa/nft/pkg/tls"
 	"golang.org/x/sync/errgroup"
 	"io"
 	"net/url"
@@ -16,27 +19,27 @@ import (
 	"time"
 )
 
-func NewClient(discordClient *discord.Client, verbose bool, profile Profile) *Settings {
+func NewClient(bot *bot.Bot, raffleTypes []RaffleType, verbose bool, profile Profile) *Settings {
 	return &Settings{
-		Discord: discordClient,
-		Handler: handler.New(),
-		Context: context.Background(),
-		Verbose: verbose,
-		Profile: profile,
+		RaffleTypes: raffleTypes,
+		Handler:     handler.New(),
+		Context:     context.Background(),
+		Verbose:     verbose,
+		Profile:     profile,
+		Bot:         bot,
 	}
 }
 
-func (s *Settings) StartMonitor(raffleTypes []RaffleType) {
+func (s *Settings) StartMonitor() {
 	logger.LogStartup(moduleName)
-
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				s.monitorRaffles(raffleTypes)
+				s.monitorRaffles()
 				return
 			}
 		}()
-		for !s.monitorRaffles(raffleTypes) {
+		for !s.monitorRaffles() {
 			select {
 			case <-s.Context.Done():
 				logger.LogShutDown(moduleName)
@@ -49,53 +52,70 @@ func (s *Settings) StartMonitor(raffleTypes []RaffleType) {
 	}()
 }
 
-func (s *Settings) monitorRaffles(raffleTypes []RaffleType) bool {
-	wg := sync.WaitGroup{}
+func NewRaffle() *Raffle {
+	return &Raffle{Misc: MiscReqs{}, Discord: DiscordReqs{}, Twitter: TwitterReqs{}}
+}
 
-	for _, raffleType := range raffleTypes {
-		wg.Add(1)
-		go func(rType RaffleType) {
+func (s *Settings) monitorRaffles() bool {
+	wg := sync.WaitGroup{}
+	for _, raffleUrl := range s.RaffleTypes {
+		go func(rfType RaffleType) {
+			wg.Add(1)
 			defer wg.Done()
 
-		}(raffleType)
+			raffles, err := s.parseRafflesURLs(string(rfType))
+			if err != nil {
+				logger.LogError(moduleName, err)
+				return
+			}
+
+			filteredRaffles := s.filter(raffles)
+
+			for _, raffle := range filteredRaffles {
+				if _, ok := s.Handler.M.Get(raffle); !ok {
+					go func(raffleURL string) {
+						if err = s.do(raffleURL); err != nil {
+							logger.LogError(moduleName, err)
+						}
+					}(raffle)
+				}
+			}
+		}(raffleUrl)
 	}
 	wg.Wait()
-
+	time.Sleep(s.RetryDelay)
 	return false
 }
 
-func (p *Profile) Monitor(client *discord.Client, raffleTypes []RaffleType) {
+func (s *Settings) Monitor(raffleTypes []RaffleType) {
 
 	logger.LogStartup(moduleName)
 
-	if err := p.login(); err != nil {
+	if err := s.Profile.login(); err != nil {
 		logger.LogError(moduleName, err)
 		return
 	}
 
-	defer func() {
-		if r := recover(); r != nil {
-			p.Monitor(client, raffleTypes)
-			return
-		}
-	}()
-
 	go func() {
-		for {
-			for _, raffleUrl := range raffleTypes {
-				err := p.fetchRaffles(string(raffleUrl))
-				if err != nil {
-					logger.LogError(moduleName, err)
-				}
+		defer func() {
+			if r := recover(); r != nil {
+				s.Monitor(raffleTypes)
+				return
 			}
-			time.Sleep(time.Duration(p.RetryDelay) * time.Millisecond)
+		}()
+		for !s.monitorRaffles() {
+			select {
+			case <-s.Context.Done():
+				return
+			default:
+				continue
+			}
 		}
 	}()
 }
 
-// fetchRaffles fetches raffle EPs
-func (p *Profile) fetchRaffles(raffleUrl string) ([]string, error) {
-
+// fetchRaffles parses available raffles on Premint.
+func (s *Settings) parseRafflesURLs(raffleUrl string) ([]string, error) {
 	raffleURL, err := url.Parse(raffleUrl)
 	if err != nil {
 		return nil, err
@@ -109,7 +129,7 @@ func (p *Profile) fetchRaffles(raffleUrl string) ([]string, error) {
 			"Accept":                    {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"},
 			"Accept-Language":           {"en-US,en;q=0.9,fr-FR;q=0.8,fr;q=0.7"},
 			"Cache-Control":             {"max-age=0"},
-			"Cookie":                    {p.getCookieHeader()},
+			"Cookie":                    {s.Profile.getCookieHeader()},
 			"Referer":                   {"https://www.premint.xyz/collectors/explore/"},
 			"Sec-Ch-Ua":                 {"\"Google Chrome\";v=\"105\", \"Not)A;Brand\";v=\"8\", \"Chromium\";v=\"105\""},
 			"Sec-Ch-Ua-Mobile":          {"?0"},
@@ -123,54 +143,38 @@ func (p *Profile) fetchRaffles(raffleUrl string) ([]string, error) {
 		},
 	}
 
-	resp, err := p.Client.Do(req)
+	resp, err := s.Profile.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode != 200 {
-		if resp.StatusCode == 429 {
-			return nil, RateLimited
-		}
-		retries++
-		if retries >= 5 {
-			return maxRetriesReached
-		}
-		logger.LogError(moduleName, fmt.Errorf("[%s] Fetching Raffle %d/5", resp.Status, retries))
-		continue
+	if resp.StatusCode != http.StatusOK {
+		tls.HandleRateLimit(s.Profile.Client, s.Profile.ProxyList, "")
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		continue
+		return nil, err
 	}
 
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
 	if err != nil {
-		continue
+		return nil, err
 	}
 
-	var raffles map[string]string
+	var raffles []string
 	doc.Find("a[href]").Each(func(i int, s *goquery.Selection) {
-		attr, _ := s.Attr("href")
-		raffles[attr] = attr
+		raffles = append(raffles, s.AttrOr("href", ""))
 	})
 
-	return filter(raffles), nil
-	/*
-		for _, Url := range filteredRafflesUrl {
-			if err = p.do(Url); err != nil {
-				logger.LogError(moduleName, err)
-			}
-		}
-	*/
+	return s.filter(raffles), nil
 }
 
-func (p *Profile) do(URL string) error {
+func (s *Settings) do(URL string) error {
 	retries := 0
-	task := &Webhook{}
+	raffle := NewRaffle()
 
-	for {
+	for i := 0; i < retries; i++ {
 		req := &http.Request{
 			Method: http.MethodGet,
 			URL:    &url.URL{Scheme: "https", Host: "www.premint.xyz", Path: URL},
@@ -179,7 +183,7 @@ func (p *Profile) do(URL string) error {
 				"Accept":                    {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"},
 				"Accept-Language":           {"en-US,en;q=0.9,fr-FR;q=0.8,fr;q=0.7"},
 				"Cache-Control":             {"max-age=0"},
-				"Cookie":                    {p.getCookieHeader()},
+				"Cookie":                    {s.Profile.getCookieHeader()},
 				"Referer":                   {"https://www.premint.xyz/collectors/explore/"},
 				"Sec-Ch-Ua":                 {"\"Google Chrome\";v=\"105\", \"Not)A;Brand\";v=\"8\", \"Chromium\";v=\"105\""},
 				"Sec-Ch-Ua-Mobile":          {"?0"},
@@ -193,7 +197,7 @@ func (p *Profile) do(URL string) error {
 			},
 		}
 
-		resp, err := p.Client.Do(req)
+		resp, err := s.Profile.Client.Do(req)
 		if err != nil {
 			retries++
 			if retries >= 5 {
@@ -202,7 +206,7 @@ func (p *Profile) do(URL string) error {
 			continue
 		}
 
-		if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			if resp.StatusCode == 429 {
 				return RateLimited
 			}
@@ -219,7 +223,7 @@ func (p *Profile) do(URL string) error {
 			continue
 		}
 
-		task.document, err = goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+		raffle.document, err = goquery.NewDocumentFromReader(strings.NewReader(string(body)))
 		if err != nil {
 			continue
 		}
@@ -228,161 +232,111 @@ func (p *Profile) do(URL string) error {
 			continue
 		}
 
-		if err = task.checkClosed(); err != nil {
-			return err
+		if raffle.isClosed() {
+			return fmt.Errorf("raffle is closed")
 		}
 
-		task.doAllTasks()
+		raffle.doAllTasks()
 
-		p.handler.M.Set(task.Title, URL)
-
-		if p.handler.M.Get(task.Title) == p.handler.MCopy.Get(task.Title) {
-			return nil
-		}
-
-		time.Sleep(2 * time.Second)
-
-		task.Slug = URL
-		if err = p.DiscordClient.SendNotification(discord.Webhook{
-			Username:  moduleName,
-			AvatarUrl: "https://pbs.twimg.com/profile_images/1505785782002339840/mgeaHOqx_400x400.jpg",
-			Embeds: []discord.Embed{
-				{
-					Title:       task.Title,
-					Description: task.Desc,
-					Url:         "https://www.premint.xyz" + task.Slug,
-					Timestamp:   discord.GetTimestamp(),
-					Color:       p.DiscordClient.Color,
-					Footer: discord.EmbedFooter{
-						Text:    p.DiscordClient.FooterText,
-						IconUrl: p.DiscordClient.FooterImage,
-					},
-					Thumbnail: discord.EmbedThumbnail{
-						Url: task.Image,
-					},
-					Fields: []discord.EmbedFields{
-						{
-							Name:   "Twitter Reqs.",
-							Value:  task.Twitter.Total,
-							Inline: false,
-						},
-						{
-							Name:   "Discord Reqs.",
-							Value:  task.Discord.Total,
-							Inline: false,
-						},
-						{
-							Name:   "Custom Reqs.",
-							Value:  task.Custom.Total,
-							Inline: false,
-						},
-					},
-				},
-			},
-		}, discord.Premint); err != nil {
-			logger.LogError(moduleName, err)
-		}
-
-		p.handler.M.ForEach(func(k string, v interface{}) {
-			p.handler.MCopy.Set(k, v)
-		})
-
+		s.Handler.M.Set(raffle.Title, URL)
+		raffle.Slug = URL
+		s.Bot.BotWebhook(raffle.buildWebhook(), bot.PremintChannel)
 		return nil
 	}
+
+	return fmt.Errorf("max error reached %s", URL)
 }
 
 // doAllTasks executes all the tasks used to fetch Raffle Information.
-func (t *Webhook) doAllTasks() {
+func (r *Raffle) doAllTasks() {
 	g, _ := errgroup.WithContext(context.Background())
 
 	g.Go(func() error {
-		t.getProjectInfo()
+		r.getProjectInfo()
 		return nil
 	})
 
 	g.Go(func() error {
-		t.getMiscInfo()
+		r.getMiscInfo()
 		return nil
 	})
 
 	g.Go(func() error {
-		t.getDiscordInfo()
+		r.getDiscordInfo()
 		return nil
 	})
 
 	g.Go(func() error {
-		t.getCustomInfo()
+		r.getCustomInfo()
 		return nil
 	})
 
 	g.Go(func() error {
-		t.getTwitterInfo()
+		r.getTwitterInfo()
 		return nil
 	})
 
-	if err := g.Wait(); err != nil {
-		return
-	}
+	_ = g.Wait()
 
-	t.updateIfNil()
+	r.updateIfNil()
 }
 
-func (t *Webhook) getProjectInfo() {
-	title := t.document.Find("title").Text()
-	t.Title = strings.Replace(title, "| PREMINT", "", -1)
-	t.Desc = t.document.Find("meta[name=description]").AttrOr("content", "")
-	t.document.Find("img[src]").Each(func(i int, s *goquery.Selection) {
+func (r *Raffle) getProjectInfo() {
+	title := r.document.Find("title").Text()
+	r.Title = strings.Replace(title, "| PREMINT", "", -1)
+	r.Desc = r.document.Find("meta[name=description]").AttrOr("content", "")
+	r.document.Find("img[src]").Each(func(i int, s *goquery.Selection) {
 		if strings.Contains(s.AttrOr("src", ""), "https://premint.imgix.net") {
-			t.Image, _ = s.Attr("src")
-			t.Image = strings.Replace(t.Image, "&amp;", "", -1)
+			r.Image, _ = s.Attr("src")
+			r.Image = strings.Replace(r.Image, "&amp;", "", -1)
 		}
 	})
 
-	if strings.Contains(t.document.Text(), "This project will be overallocating") {
-		t.Misc.OverAllocating = "> • This project will be overallocating.\n"
-		t.Misc.Total += t.Misc.OverAllocating
+	if strings.Contains(r.document.Text(), "This project will be overallocating") {
+		r.Misc.OverAllocating = "> • This project will be overallocating.\n"
+		r.Misc.Total += r.Misc.OverAllocating
 	}
 }
 
-func (t *Webhook) getTwitterInfo() {
-	if strings.Contains(t.document.Text(), "step-twitter") {
-		t.document.Find("a[class]").Each(func(i int, s *goquery.Selection) {
+func (r *Raffle) getTwitterInfo() {
+	if strings.Contains(r.document.Text(), "step-twitter") {
+		r.document.Find("a[class]").Each(func(i int, s *goquery.Selection) {
 			if strings.Contains(s.Text(), "@") {
 				slice := []string{s.Text()}
 				for _, v := range slice {
 					account := v
 					res := strings.ReplaceAll(v, "@", "")
-					t.Twitter.Account = "> • Must Follow [" + account + "](https://twitter.com/" + res + ")\n"
+					r.Twitter.Account = "> • Must Follow [" + account + "](https://twitter.com/" + res + ")\n"
 				}
-				t.Twitter.Total += t.Twitter.Account
+				r.Twitter.Total += r.Twitter.Account
 			}
 		})
 	} else {
-		t.Twitter.Account = ""
+		r.Twitter.Account = ""
 	}
 
-	if strings.Contains(t.document.Text(), "Must Like &amp;") {
-		t.document.Find("div[class]").Each(func(i int, s *goquery.Selection) {
+	if strings.Contains(r.document.Text(), "Must Like &amp;") {
+		r.document.Find("div[class]").Each(func(i int, s *goquery.Selection) {
 			if strings.Contains(s.Find("a[href]").AttrOr("href", "empty"), "twitter.com/user/status") {
-				t.Twitter.Tweet = "> • Must Like & Retweet this [Tweet]" + "(" + s.Find("a[href]").AttrOr("href", "empty") + ")\n"
-				t.Twitter.Total += t.Twitter.Tweet
+				r.Twitter.Tweet = "> • Must Like & Retweet this [Tweet]" + "(" + s.Find("a[href]").AttrOr("href", "empty") + ")\n"
+				r.Twitter.Total += r.Twitter.Tweet
 			}
 		})
-	} else if strings.Contains(t.document.Text(), "Must Like") {
-		t.document.Find("div[class]").Each(func(i int, s *goquery.Selection) {
+	} else if strings.Contains(r.document.Text(), "Must Like") {
+		r.document.Find("div[class]").Each(func(i int, s *goquery.Selection) {
 			if strings.Contains(s.Find("a[href]").AttrOr("href", "empty"), "twitter.com/user/status") {
-				t.Twitter.Tweet = "> • Must Like this [Tweet]" + "(" + s.Find("a[href]").AttrOr("href", "empty") + ")\n"
-				t.Twitter.Total += t.Twitter.Tweet
+				r.Twitter.Tweet = "> • Must Like this [Tweet]" + "(" + s.Find("a[href]").AttrOr("href", "empty") + ")\n"
+				r.Twitter.Total += r.Twitter.Tweet
 			}
 		})
 	}
 }
 
-func (t *Webhook) getDiscordInfo() {
-	if strings.Contains(t.document.Text(), "Join the") && strings.Contains(t.document.Text(), "and have the") {
+func (r *Raffle) getDiscordInfo() {
+	if strings.Contains(r.document.Text(), "Join the") && strings.Contains(r.document.Text(), "and have the") {
 		var first string
 		var firstRole string
-		t.document.Find("a[href]").Each(func(i int, s *goquery.Selection) {
+		r.document.Find("a[href]").Each(func(i int, s *goquery.Selection) {
 			if strings.Contains(s.AttrOr("href", "empty"), "discord.gg") || strings.Contains(s.AttrOr("href", "empty"), "discord.com") {
 				//ServerName := s.Text()
 				ServerURL, _ := s.Attr("href")
@@ -391,24 +345,24 @@ func (t *Webhook) getDiscordInfo() {
 
 			}
 		})
-		t.Discord.Server = "> • Must Join the [Discord Server](" + first + ")\n"
-		t.Discord.Total += t.Discord.Server
+		r.Discord.Server = "> • Must Join the [Discord Server](" + first + ")\n"
+		r.Discord.Total += r.Discord.Server
 
-		if strings.Contains(t.document.Find("div[class]").Add("span[class]").Text(), "and have the") {
+		if strings.Contains(r.document.Find("div[class]").Add("span[class]").Text(), "and have the") {
 
-			t.document.Find("div[class]").Add("span[class]").Each(func(i int, s *goquery.Selection) {
+			r.document.Find("div[class]").Add("span[class]").Each(func(i int, s *goquery.Selection) {
 				if strings.Contains(s.AttrOr("class", ""), "c-base-1 strong-700") {
 					firstRole = s.Text()
 				}
 			})
 
-			t.Discord.Role = "> • Must have the `" + firstRole + "` Role\n"
-			t.Discord.Total += t.Discord.Role
+			r.Discord.Role = "> • Must have the `" + firstRole + "` Role\n"
+			r.Discord.Total += r.Discord.Role
 		}
 
-	} else if strings.Contains(t.document.Find("div[class]").Add("span[class]").Text(), "Join the") {
+	} else if strings.Contains(r.document.Find("div[class]").Add("span[class]").Text(), "Join the") {
 		var first string
-		t.document.Find("a[href]").Each(func(i int, s *goquery.Selection) {
+		r.document.Find("a[href]").Each(func(i int, s *goquery.Selection) {
 			if strings.Contains(s.AttrOr("href", "empty"), "discord.gg") || strings.Contains(s.AttrOr("href", "empty"), "discord.com") {
 				//ServerName := s.Text()
 				ServerURL, ok := s.Attr("href")
@@ -419,31 +373,31 @@ func (t *Webhook) getDiscordInfo() {
 				first = sl[0]
 			}
 		})
-		t.Discord.Server = "> • Must Join the [Discord Server](" + first + ")\n"
-		t.Discord.Total += t.Discord.Server
+		r.Discord.Server = "> • Must Join the [Discord Server](" + first + ")\n"
+		r.Discord.Total += r.Discord.Server
 	}
 
 }
 
-func (t *Webhook) getCustomInfo() {
-	if strings.Contains(t.document.Text(), "step-custom") {
-		t.document.Find("label[class]").Each(func(i int, s *goquery.Selection) {
-			t.Custom.Total = "> • " + s.Text()
+func (r *Raffle) getCustomInfo() {
+	if strings.Contains(r.document.Text(), "step-custom") {
+		r.document.Find("label[class]").Each(func(i int, s *goquery.Selection) {
+			r.Custom.Total = "> • " + s.Text()
 		})
 	}
 }
 
-func (t *Webhook) getMiscInfo() {
-	if strings.Contains(t.document.Text(), "Have at least") {
-		t.document.Find("i[class]").Each(func(i int, s *goquery.Selection) {
+func (r *Raffle) getMiscInfo() {
+	if strings.Contains(r.document.Text(), "Have at least") {
+		r.document.Find("i[class]").Each(func(i int, s *goquery.Selection) {
 			if strings.Contains(s.Text(), "Have at least") { //todo: needs a fix
 				//log.Println(s.Text())
 			}
 		})
 
-		if strings.Contains(t.document.Text(), "disqualified if your balance") {
-			t.BalanceFall = "> • Your entry will be disqualified if your balance falls below" + t.ETHtoHold
-			t.Misc.Total += t.BalanceFall
+		if strings.Contains(r.document.Text(), "disqualified if your balance") {
+			r.BalanceFall = "> • Your entry will be disqualified if your balance falls below" + r.ETHtoHold
+			r.Misc.Total += r.BalanceFall
 		} else {
 
 		}
@@ -452,32 +406,32 @@ func (t *Webhook) getMiscInfo() {
 
 // updateIfNil verifies whether the content is empty. If it happens to be empty,
 // it is replaced with a cross-mark symbol.
-func (t *Webhook) updateIfNil() {
-	if t.Twitter.Total == "" {
-		t.Twitter.Total = "> • ❌"
+func (r *Raffle) updateIfNil() {
+	if r.Twitter.Total == "" {
+		r.Twitter.Total = "> • ❌"
 	}
-	if t.Discord.Total == "" {
-		t.Discord.Total = "> • ❌"
+	if r.Discord.Total == "" {
+		r.Discord.Total = "> • ❌"
 	}
-	if t.Misc.Total == "" {
-		t.Misc.Total = "> • ❌"
+	if r.Misc.Total == "" {
+		r.Misc.Total = "> • ❌"
 	}
-	if t.Custom.Total == "" {
-		t.Custom.Total = "> • ❌"
+	if r.Custom.Total == "" {
+		r.Custom.Total = "> • ❌"
 	}
 }
 
-func (s *Settings) filter(slice map[string]string) (filteredSlice []string) {
-	for _, value := range slice {
-		ok := s.verifyKeyword(value)
+func (s *Settings) filter(slice []string) (filteredSlice []string) {
+	for _, val := range slice {
+		ok := s.verifyKeyword(val)
 		if ok {
-			filteredSlice = append(filteredSlice, value)
+			filteredSlice = append(filteredSlice, val)
 		}
 	}
 	return filteredSlice
 }
 
-// verifyKeyword verifies if the account is logged in by using a list of URLs.
+// verifyKeyword verifies if the account is logged in by using a list of blacklisted URLs.
 func (s *Settings) verifyKeyword(word string) bool {
 	bannedKeywords := []string{
 		"#",
@@ -505,7 +459,45 @@ func (s *Settings) verifyKeyword(word string) bool {
 	return true
 }
 
+func (r *Raffle) buildWebhook() *discordgo.MessageSend {
+	return &discordgo.MessageSend{
+		Embeds: []*discordgo.MessageEmbed{
+			{
+				Title:       r.Title,
+				Description: r.Desc,
+				URL:         "https://www.premint.xyz" + r.Slug,
+				Timestamp:   discord.GetTimestamp(),
+				Color:       bot.Purple,
+				Footer: &discordgo.MessageEmbedFooter{
+					Text:    fmt.Sprintf(""),
+					IconURL: bot.Image,
+				},
+				Thumbnail: &discordgo.MessageEmbedThumbnail{
+					URL: r.Image,
+				},
+				Fields: []*discordgo.MessageEmbedField{
+					{
+						Name:   "Twitter Reqs.",
+						Value:  r.Twitter.Total,
+						Inline: false,
+					},
+					{
+						Name:   "Discord Reqs.",
+						Value:  r.Discord.Total,
+						Inline: false,
+					},
+					{
+						Name:   "Custom Reqs.",
+						Value:  r.Custom.Total,
+						Inline: false,
+					},
+				},
+			},
+		},
+	}
+}
+
 // isClosed verifies if the raffle does accept new entries.
-func (t *Webhook) isClosed() bool {
-	return strings.Contains(t.document.Text(), "This list is no longer accepting entries")
+func (r *Raffle) isClosed() bool {
+	return strings.Contains(r.document.Text(), "This list is no longer accepting entries")
 }

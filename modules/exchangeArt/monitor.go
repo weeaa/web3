@@ -28,7 +28,7 @@ func NewClient(discordClient *discord.Client, verbose, monitor1Supply bool, retr
 	}
 }
 
-// Monitor monitors newest releases of an artist from ExchangeArt.
+// StartMonitor monitors newest releases of an artist from ExchangeArt.
 func (s *Settings) StartMonitor(artists []string) {
 	logger.LogStartup(moduleName)
 	go func() {

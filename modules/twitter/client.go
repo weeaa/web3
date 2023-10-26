@@ -9,11 +9,16 @@ type Client struct {
 	OAuthToken string
 	CSRFToken  string
 	Client     tls_client.HttpClient
+	Proxies    []string
 }
 
-func NewClient(OAuthToken, CSRFToken string) *Client {
+// NewClient creates a client. If you are not using Nitter, be
+// sure to provide values for CSRFToken and OAuthToken.
+func NewClient(OAuthToken, CSRFToken string, proxies []string) *Client {
 	return &Client{
-		CSRFToken: CSRFToken,
-		Client:    tls.NewProxyLess(),
+		OAuthToken: OAuthToken,
+		CSRFToken:  CSRFToken,
+		Client:     tls.NewProxyLess(),
+		Proxies:    proxies,
 	}
 }

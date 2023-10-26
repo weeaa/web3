@@ -1,5 +1,12 @@
 package unisat
 
+import (
+	"context"
+	tls_client "github.com/bogdanfinn/tls-client"
+	"github.com/weeaa/nft/discord/bot"
+	"github.com/weeaa/nft/pkg/handler"
+)
+
 const (
 	moduleName                              = "Unisat BRC20"
 	DefaultPercentageIncreaseBetweenRefresh = 3
@@ -9,6 +16,17 @@ const (
 	host = "api.unisat.io"
 	path = "query-v4/brc20/"
 )
+
+type Settings struct {
+	Bot                              *bot.Bot
+	Handler                          *handler.Handler
+	Context                          context.Context
+	Verbose                          bool
+	RotateProxyOnBan                 bool
+	Client                           tls_client.HttpClient
+	ProxyList                        []string
+	PercentageIncreaseBetweenRefresh float64
+}
 
 type ResTickers struct {
 	Code int    `json:"code"`

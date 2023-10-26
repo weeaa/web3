@@ -1,14 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/weeaa/nft/api"
-	"github.com/weeaa/nft/db"
-	"github.com/weeaa/nft/discord"
+	"github.com/weeaa/nft/database/db"
+	"github.com/weeaa/nft/discord/bot"
 	"github.com/weeaa/nft/internal/services"
+	"os"
 )
 
 func main() {
@@ -19,24 +21,32 @@ func main() {
 		log.Fatal(err)
 	}
 
-	pg, err := db.New()
+	pg, err := db.New(context.Background(), fmt.Sprintf("postgres://%s:%s@localhost:%s/%s", os.Getenv("PSQL_USERNAME"), os.Getenv("PSQL_PASSWORD"), os.Getenv("PSQL_PORT"), os.Getenv("PSQL_DB_NAME")))
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	discBot, err := bot.New(pg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err = discBot.Start(); err != nil {
+		log.Fatal(err)
+	}
+
 	router := gin.Default()
-	initModules(router, nil, pg)
+	gin.SetMode(gin.ReleaseMode)
 
-	//ft, _ := friendtech.NewClient(nil, true, os.Getenv("NODE_WSS_URL"), os.Getenv("NODE_HTTP_URL"))
-	//ft.MonitorFriendTechLogs()
+	initModules(router, discBot, pg)
 
-	if err = router.Run(); err != nil {
+	if err = router.Run(":992"); err != nil {
 		gin.DefaultErrorWriter.Write([]byte(fmt.Sprintf("failed starting application: %v", err)))
 	}
+
 	<-c
 }
 
-func initModules(router *gin.Engine, bot *discord.Bot, db *db.DB) {
-
+func initModules(router *gin.Engine, bot *bot.Bot, db *db.DB) {
 	api.InitRoutes(router, services.NewUserService(db))
 }

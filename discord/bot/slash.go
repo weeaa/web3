@@ -42,6 +42,7 @@ var (
 
 // registerCommands registers slash commands.
 func (b *Bot) registerCommands() {
+
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
 	for i, v := range commands {
 		cmd, err := b.s.ApplicationCommandCreate(b.s.State.User.ID, GuildID, v)

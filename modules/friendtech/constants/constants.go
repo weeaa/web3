@@ -1,4 +1,4 @@
-package fren_utils
+package constants
 
 const FRIEND_TECH_CONTRACT_V1 = "0xcf205808ed36593aa40a44f10c7f7c2f67d4a4d4"
 const ProdBaseApi = "prod-api.kosetto.com"

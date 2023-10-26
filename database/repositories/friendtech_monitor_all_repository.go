@@ -17,11 +17,12 @@ func NewFriendTechMonitoredAllUsersRepository(db *pgxpool.Pool) *MonitoredAllUse
 }
 
 func (r *MonitoredAllUsersRepository) InsertUser(u *models.FriendTechMonitorAll, ctx context.Context) error {
-	query := `INSERT INTO usersall (base_address, status, twitter_username, twitter_name, twitter_url, user_id) VALUES (@base_address, @status, @twitter_username, @twitter_name, @twitter_url, @user_id)`
+	query := `INSERT INTO user_monitoring_database (base_address, status, followers, twitter_username, twitter_name, twitter_url, user_id) VALUES (@base_address, @status, @followers, @twitter_username, @twitter_name, @twitter_url, @user_id)`
 
 	args := pgx.NamedArgs{
 		"base_address":     u.BaseAddress,
 		"status":           u.Status,
+		"followers":        u.Followers,
 		"twitter_username": u.TwitterUsername,
 		"twitter_name":     u.TwitterName,
 		"twitter_url":      u.TwitterURL,
@@ -39,13 +40,40 @@ func (r *MonitoredAllUsersRepository) InsertUser(u *models.FriendTechMonitorAll,
 func (r *MonitoredAllUsersRepository) GetUserByAddress(baseAddress string, ctx context.Context) (*models.FriendTechMonitorAll, error) {
 	var user models.FriendTechMonitorAll
 
-	query := `SELECT base_address, status, twitter_username, twitter_name, twitter_url, user_id FROM usersall WHERE base_address = $1`
+	query := `SELECT base_address, status, followers, twitter_username, twitter_name, twitter_url, user_id FROM user_monitoring_database WHERE base_address = $1`
 
-	err := r.db.QueryRow(ctx, query, baseAddress).Scan(&user.BaseAddress, &user.Status, &user.TwitterUsername, &user.TwitterName, &user.TwitterURL, &user.UserID)
+	err := r.db.QueryRow(ctx, query, baseAddress).Scan(&user.BaseAddress, &user.Status, &user.Followers, &user.TwitterUsername, &user.TwitterName, &user.TwitterURL, &user.UserID)
 
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch user: %w", err)
 	}
 
 	return &user, nil
+}
+
+func (r *MonitoredAllUsersRepository) GetAllAddresses(ctx context.Context) ([]string, error) {
+	var baseAddresses []string
+
+	query := "SELECT base_address FROM user_monitoring_database"
+
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var baseAddress string
+		if err = rows.Scan(&baseAddress); err != nil {
+			return nil, err
+		}
+		baseAddresses = append(baseAddresses, baseAddress)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return baseAddresses, nil
 }

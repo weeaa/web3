@@ -5,8 +5,10 @@ import (
 	"errors"
 	"github.com/PuerkitoBio/goquery"
 	tls_client "github.com/bogdanfinn/tls-client"
-	"github.com/weeaa/nft/discord"
+	"github.com/weeaa/nft/discord/bot"
 	"github.com/weeaa/nft/pkg/handler"
+	"github.com/weeaa/nft/pkg/utils"
+	"time"
 )
 
 const (
@@ -28,19 +30,27 @@ var (
 )
 
 type Settings struct {
-	Discord *discord.Client
+	Bot *bot.Bot
+
+	// Handler stores raffles slug/urls.
 	Handler *handler.Handler
-	Context context.Context
-	Verbose bool
-	Profile Profile
+
+	Context    context.Context
+	Verbose    bool
+	Profile    Profile
+	RetryDelay time.Duration
+
+	RaffleTypes []RaffleType
 }
 
 type Profile struct {
+	Wallet        *utils.EthereumWallet
 	publicAddress string
 	privateKey    string
-	sessionId     string
-	csrfToken     string
-	nonce         string
+
+	sessionId string
+	csrfToken string
+	nonce     string
 
 	RetryDelay       int
 	Client           tls_client.HttpClient
@@ -49,7 +59,8 @@ type Profile struct {
 	isLoggedIn       bool
 }
 
-type Webhook struct {
+type Raffle struct {
+	// document holds the HTML of the raffle page.
 	document *goquery.Document
 
 	Title        string

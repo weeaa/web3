@@ -1,13 +1,18 @@
 package bot
 
+import (
+	"os"
+)
+
 const discord = "Discord Bot"
 
 const GuildID = "914250717722734652"
 
 const Image = "https://images-ext-2.discordapp.net/external/uAW-8FcuQgvrhN3PL1TxNl19LfP9nSR2KhXOhnQLVr8/https/camo.githubusercontent.com/a0d06e6da8dcc033e33c2694eb550ffb775a3f805c7e2edd55758275a0862dd4/68747470733a2f2f63646e2e646973636f72646170702e636f6d2f6174746163686d656e74732f3638393036333238303335383036343135382f313133393533383030323034313839373034312f696d6167652e706e67"
 
-// Roles
-const ()
+const (
+	CommunityPings = ""
+)
 
 // Colors
 const (
@@ -25,9 +30,14 @@ const (
 	Authenticate = "1156489358011019264"
 )
 
+var (
+	PremintChannel = os.Getenv("PREMINT_WEBHOOK")
+)
+
 // FriendTech Channels
 const (
-	FriendTech = "friendTech"
+	FriendTech      = "friendTech"
+	FriendTechImage = "https://content.fortune.com/wp-content/uploads/2023/08/friend.tech-logo.jpg"
 
 	FriendTechNewUsers      = "1156497474630991903"
 	FriendTechNewUsers5     = "1158558173779734548"
@@ -44,7 +54,7 @@ const (
 	FriendTechFishBuys  = "1161255638270226454"
 	FriendTechFishSells = "1161255672244097065"
 
-	FriendTechSrimpBuys   = "1161255555202039989"
+	FriendTechShrimpBuys  = "1161255555202039989"
 	FriendTechShrimpSells = "1161255595173748737"
 
 	FriendTechWhalesBuys  = "1156884576556306473"

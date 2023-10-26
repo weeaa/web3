@@ -7,12 +7,10 @@ import (
 )
 
 func (b *Bot) BotWebhook(webhook *discordgo.MessageSend, channelID string) {
-
 	_, err := b.s.ChannelMessageSendComplex(channelID, webhook)
 	if err != nil {
 		logger.LogError(discord, err)
 	}
-
 }
 
 func BundleQuickTaskComponents(target, module string) []discordgo.MessageComponent {

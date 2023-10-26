@@ -9,6 +9,7 @@ import (
 
 var ExecPath = getExecPath()
 
+// getExecPath returns the executable's absolute path.
 func getExecPath() string {
 	ex, err := os.Executable()
 	if err != nil {

@@ -4,6 +4,8 @@ import (
 	"sync"
 )
 
+// SafeMap acts as a safemap, without having to
+// worry about concurrent reads/writes.
 type SafeMap[K comparable, V any] struct {
 	mu   sync.RWMutex
 	data map[K]V

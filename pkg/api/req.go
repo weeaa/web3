@@ -9,7 +9,6 @@ import (
 	"github.com/weeaa/nft/modules/twitter"
 	"github.com/weeaa/nft/pkg/tls"
 	"io"
-	"log"
 	"net/url"
 	"os"
 	"strconv"
@@ -22,6 +21,7 @@ const (
 func AddUserToMonitor(baseAddress, by string) (map[string]any, error) {
 	var buf bytes.Buffer
 
+	nitterClient := twitter.NewClient("", "", []string{})
 	client := tls.NewProxyLess()
 
 	URL, _ := url.Parse("http://localhost:992/v1/user")
@@ -31,7 +31,7 @@ func AddUserToMonitor(baseAddress, by string) (map[string]any, error) {
 		return nil, err
 	}
 
-	nitter, err := twitter.FetchNitter(userInfo.TwitterUsername, tls.NewProxyLess())
+	nitter, err := nitterClient.FetchNitter(userInfo.TwitterUsername)
 	if err != nil {
 		return nil, err
 	}
@@ -64,15 +64,14 @@ func AddUserToMonitor(baseAddress, by string) (map[string]any, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println(err)
 		return nil, fmt.Errorf("error client: retry in some moments")
 	}
-
-	log.Print(resp.StatusCode)
 
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("error req: invalid resp status")
 	}
+
+	// todo parse followers with nitter
 
 	return map[string]any{
 		"image":            userInfo.TwitterPfpUrl,

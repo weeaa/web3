@@ -34,7 +34,7 @@ func NewProfile(publicAddress, privateKey, proxy string, retryDelay int) *Profil
 	}
 }
 
-func (s *Settings) login() error {
+func (p *Profile) login() error {
 	retries := 0
 	for {
 
@@ -261,7 +261,7 @@ func sign(message string, privateKey *ecdsa.PrivateKey) (string, error) {
 	hash := crypto.Keccak256Hash([]byte(fullMessage))
 	signatureBytes, err := crypto.Sign(hash.Bytes(), privateKey)
 	if err != nil {
-		return ":(", err
+		return "", err
 	}
 	signatureBytes[64] += 27
 	return hexutil.Encode(signatureBytes), nil

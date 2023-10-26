@@ -46,4 +46,5 @@ type UserInformation struct {
 	ShareSupply                int    `json:"shareSupply"`
 	DisplayPrice               string `json:"displayPrice"`
 	LifetimeFeesCollectedInWei string `json:"lifetimeFeesCollectedInWei"`
+	UserBio                    any    `json:"userBio"`
 }

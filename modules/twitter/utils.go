@@ -4,17 +4,15 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	http "github.com/bogdanfinn/fhttp"
-	tls_client "github.com/bogdanfinn/tls-client"
 	"io"
-	"log"
 	"math"
 	"net/url"
 	"strings"
 	"time"
 )
 
-// FetchNitter is a non rate limit alternative to fetch a Twitter user's information.
-func FetchNitter(username string, client tls_client.HttpClient) (NitterResponse, error) {
+// FetchNitter offers a reduced rate limit alternative (& free) to the Twitter API.
+func (c *Client) FetchNitter(username string) (NitterResponse, error) {
 	var nitter NitterResponse
 
 	req := &http.Request{
@@ -38,12 +36,11 @@ func FetchNitter(username string, client tls_client.HttpClient) (NitterResponse,
 		},
 	}
 
-	resp, err := client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return nitter, err
 	}
 
-	log.Println("nitter", resp.StatusCode)
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
@@ -58,7 +55,7 @@ func FetchNitter(username string, client tls_client.HttpClient) (NitterResponse,
 
 	nitter.Followers = strings.ReplaceAll(doc.Find("li[class=followers]").Find("span[class=profile-stat-num]").Text(), ",", "")
 	nitter.JoinDate = doc.Find("div[class=profile-joindate]").Find("span").AttrOr("title", "")
-	nitter.AccountAge = GetAccountAgeNitter(nitter.JoinDate)
+	nitter.AccountAge = getAccountAgeNitter(nitter.JoinDate)
 
 	return nitter, nil
 }
@@ -74,7 +71,7 @@ func GetAccountAge(date string) string {
 	return fmt.Sprintf("%d days", int(math.Abs(t.Sub(time.Now()).Hours()/24)))
 }
 
-func GetAccountAgeNitter(date string) string {
+func getAccountAgeNitter(date string) string {
 	dateFormat := "3:04 PM - 2 Jan 2006"
 
 	t, err := time.Parse(dateFormat, date)

@@ -1,7 +1,7 @@
 package models
 
 type (
-	TraderAddBody struct {
+	UserAddBody struct {
 		BaseAddress     string `json:"base_address"`
 		Status          string `json:"status"`
 		TwitterUsername string `json:"twitter_username"`
@@ -11,7 +11,7 @@ type (
 		AddedBy         string `json:"added_by"`
 	}
 
-	TraderRemoveBody struct {
+	UserRemoveBody struct {
 		BaseAddress string `json:"baseAddress"`
 	}
 )

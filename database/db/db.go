@@ -8,7 +8,8 @@ import (
 )
 
 type DB struct {
-	db         *pgxpool.Pool
+	db *pgxpool.Pool
+
 	Indexer    *repositories.IndexerRepository
 	Monitor    *repositories.MonitoredUsersRepository
 	MonitorAll *repositories.MonitoredAllUsersRepository

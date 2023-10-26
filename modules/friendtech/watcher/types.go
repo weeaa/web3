@@ -7,7 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/weeaa/nft/database/db"
 	"github.com/weeaa/nft/discord/bot"
-	"time"
+	"github.com/weeaa/nft/modules/twitter"
+	"github.com/weeaa/nft/pkg/cache"
 )
 
 const watcher = "Friend Tech Watcher"
@@ -18,17 +19,37 @@ const (
 )
 
 type Watcher struct {
-	DB         *db.DB
-	WSSClient  *ethclient.Client
-	HTTPClient *ethclient.Client
-	Client     tls_client.HttpClient
-	Addresses  map[string]string // Base Addresses you want to monitor
-	Counter    int
+	DB *db.DB
 
+	// WSSClient is your Node Client Websocket conn.
+	WSSClient     *ethclient.Client
+	HTTPClient    *ethclient.Client
+	NitterClient  *twitter.Client
+	WatcherClient tls_client.HttpClient
+
+	// Cache is used to store self-sells
+	// and detect potential rugs/exploits.
+	Cache *cache.Handler
+
+	// Addresses stores Base addresses you want to monitor
+	// fetched directly from the database.
+	Addresses map[string]string
+
+	// Counter represents the most recent FriendTech userID
+	// that will be observed, as a starting ID, for new users.
+	Counter int
+
+	// OutStreamData is the data sent to our websocket.
 	OutStreamData chan BroadcastData
 
-	ABI  abi.ABI
-	Pool chan string
+	ABI abi.ABI
+
+	// Pool is a 'watching' pool where new users that
+	// have not deposited yet ETH to their wallet
+	// will be 'watched' until they deposit, for x time.
+	Pool       chan string
+	EnablePool bool
+	Deadline   float64
 
 	ProxyList     []string
 	Bot           *bot.Bot
@@ -45,20 +66,4 @@ const (
 type BroadcastData struct {
 	Event string `json:"event"`
 	Data  any    `json:"data"`
-}
-
-type L2TransactionsPendingResponse struct {
-	Items []struct {
-		L1BlockNumber    int       `json:"l1_block_number"`
-		L1BlockTimestamp time.Time `json:"l1_block_timestamp"`
-		L1TxHash         string    `json:"l1_tx_hash"`
-		L1TxOrigin       string    `json:"l1_tx_origin"`
-		L2TxGasLimit     string    `json:"l2_tx_gas_limit"`
-		L2TxHash         string    `json:"l2_tx_hash"`
-	} `json:"items"`
-	NextPageParams struct {
-		ItemsCount    int    `json:"items_count"`
-		L1BlockNumber int    `json:"l1_block_number"`
-		TxHash        string `json:"tx_hash"`
-	} `json:"next_page_params"`
 }

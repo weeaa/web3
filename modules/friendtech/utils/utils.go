@@ -1,61 +1,38 @@
 package fren_utils
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	http "github.com/bogdanfinn/fhttp"
-	tls_client "github.com/bogdanfinn/tls-client"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/weeaa/nft/database/db"
-	"github.com/weeaa/nft/discord"
-	"github.com/weeaa/nft/modules/friendtech"
-	"github.com/weeaa/nft/pkg/handler"
-	"github.com/weeaa/nft/pkg/utils"
+	"github.com/bogdanfinn/tls-client"
+	"github.com/weeaa/nft/modules/friendtech/constants"
+	"github.com/weeaa/nft/pkg/tls"
 	"io"
 	"log"
+	"math/big"
 	"net/url"
 )
 
-func NewClient(discordClient *discord.Client, verbose bool, WSSNodeUrl, HTTPNodeUrl string, db *db.DB) (*friendtech.Settings, error) {
-	ftAbi, err := utils.ReadABI("./abi/friendtech.json")
-	if err != nil {
-		return nil, fmt.Errorf("error reading abi: %w", err)
-	}
+type Client struct {
+	Bearer string
+	Client tls_client.HttpClient
+}
 
-	wssClient, err := ethclient.Dial(WSSNodeUrl)
-	if err != nil {
-		return nil, fmt.Errorf("error connecting to wss node: %w", err)
-	}
-
-	httpClient, err := ethclient.Dial(HTTPNodeUrl)
-	if err != nil {
-		return nil, fmt.Errorf("error connecting to http node: %w", err)
-	}
-
-	return &friendtech.Settings{
-		WSSClient:  wssClient,
-		HTTPClient: httpClient,
-		Discord:    discordClient,
-		Verbose:    verbose,
-		Context:    context.Background(),
-		Handler:    handler.New(),
-		ABI:        ftAbi,
-		DB:         db,
-	}, nil
+func NewClient(bearer string) *Client {
+	return &Client{Bearer: "Bearer " + bearer, Client: tls.NewProxyLess()}
 }
 
 // AddWishList adds every user you want to your wishlist.
-func AddWishList(address, bearer string, client tls_client.HttpClient) error {
+func (c *Client) AddWishList(address string) error {
 
 	req := &http.Request{
 		Method: http.MethodPost,
-		URL:    &url.URL{Scheme: "https", Host: ProdBaseApi, Path: "/watchlist-users/" + address},
-		Host:   ProdBaseApi,
+		URL:    &url.URL{Scheme: "https", Host: constants.ProdBaseApi, Path: "/watchlist-users/" + address},
+		Host:   constants.ProdBaseApi,
 		Header: http.Header{
 			"authority":          {"prod-api.kosetto.com"},
 			"accept":             {"application/json"},
-			"authorization":      {bearer},
+			"authorization":      {c.Bearer},
 			"accept-language":    {"en-US,en;q=0.9"},
 			"accept-encoding":    {"gzip, deflate, br"},
 			"referer":            {"https://www.friend.tech/"},
@@ -68,11 +45,11 @@ func AddWishList(address, bearer string, client tls_client.HttpClient) error {
 			"content-type":       {"application/json"},
 			"sec-fetch-mode":     {"cors"},
 			"sec-fetch-dest":     {"empty"},
-			"user-agent":         {IphoneUserAgent},
+			"user-agent":         {constants.IphoneUserAgent},
 		},
 	}
 
-	resp, err := client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -83,22 +60,22 @@ func AddWishList(address, bearer string, client tls_client.HttpClient) error {
 		return fmt.Errorf("error adding to wishlist: %s", resp.Status)
 	}
 
-	// à noter: pas de body resp, donc si 200 = OK
+	// if resp is 200, you're good
 
 	return nil
 }
 
 // RedeemCodes fetches all the invite codes of a user.
-func RedeemCodes(bearer string, client tls_client.HttpClient) ([]string, error) {
+func (c *Client) RedeemCodes() ([]string, error) {
 
 	req := &http.Request{
 		Method: http.MethodGet,
-		URL:    &url.URL{Scheme: "https", Host: ProdBaseApi, Path: "/invite-codes"},
-		Host:   ProdBaseApi,
+		URL:    &url.URL{Scheme: "https", Host: constants.ProdBaseApi, Path: "/invite-codes"},
+		Host:   constants.ProdBaseApi,
 		Header: http.Header{
 			"authority":          {"prod-api.kosetto.com"},
 			"accept":             {"application/json"},
-			"authorization":      {bearer},
+			"authorization":      {c.Bearer},
 			"accept-language":    {"en-US,en;q=0.9"},
 			"accept-encoding":    {"gzip, deflate, br"},
 			"referer":            {"https://www.friend.tech/"},
@@ -111,11 +88,11 @@ func RedeemCodes(bearer string, client tls_client.HttpClient) ([]string, error) 
 			"content-type":       {"application/json"},
 			"sec-fetch-mode":     {"cors"},
 			"sec-fetch-dest":     {"empty"},
-			"user-agent":         {IphoneUserAgent},
+			"user-agent":         {constants.IphoneUserAgent},
 		},
 	}
 
-	resp, err := client.Do(req)
+	resp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -156,11 +133,11 @@ func GetUserInformation(address string, client tls_client.HttpClient) (UserInfor
 
 	req := &http.Request{
 		Method: http.MethodGet,
-		URL:    &url.URL{Scheme: "https", Host: ProdBaseApi, Path: "/users/" + address},
-		Host:   ProdBaseApi,
+		URL:    &url.URL{Scheme: "https", Host: constants.ProdBaseApi, Path: "/users/" + address},
+		Host:   constants.ProdBaseApi,
 		Header: http.Header{
 			"sec-ch-ua":          {"\"Chromium\";v=\"117\", \"Not;A=Brand\";v=\"8\""},
-			"user-agent":         {IphoneUserAgent},
+			"user-agent":         {constants.IphoneUserAgent},
 			"referer":            {"https://www.friend.tech/"},
 			"sec-ch-ua-platform": {"\"macOS\""},
 			"sec-ch-ua-mobile":   {"?0"},
@@ -192,13 +169,15 @@ func GetUserInformation(address string, client tls_client.HttpClient) (UserInfor
 	return r, nil
 }
 
+// AssertImportance assigns a status.
 func AssertImportance(t any, impType ImpType) Importance {
+	const none = "none"
 	switch impType {
 	case Followers:
 		n, ok := t.(int)
 		if !ok {
 			log.Println("is not an int")
-			return "none"
+			return none
 		}
 
 		thresholds := []int{
@@ -221,11 +200,30 @@ func AssertImportance(t any, impType ImpType) Importance {
 			return Whale
 		}
 
-		return "none"
+		return none
 	case Balance:
+		n, ok := t.(*big.Int)
+		if !ok {
+			return none
+		}
 
-		return Shrimp
+		thresholds := []*big.Int{}
+
+		if n.Int64() >= thresholds[0].Int64() && n.Int64() <= thresholds[1].Int64() {
+			return Shrimp
+		}
+
+		// if superior to
+		if n.Int64() >= thresholds[1].Int64() && n.Int64() <= thresholds[2].Int64() {
+			return Fish
+		}
+
+		if n.Int64() >= thresholds[2].Int64() {
+			return Whale
+		}
+
+		return none
 	default:
-		return Shrimp
+		return none
 	}
 }

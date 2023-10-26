@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/weeaa/nft/database"
+	"github.com/weeaa/nft/database/models"
 	"github.com/weeaa/nft/discord"
 	"github.com/weeaa/nft/discord/bot"
 	"github.com/weeaa/nft/pkg/handler"
@@ -32,113 +32,120 @@ func NewClient(discordClient *discord.Client, verbose bool, nodeUrl string, moni
 	}, nil
 }
 
-func (s *Settings) StartMonitor(wallets []string) {
+func (s *Settings) StartMonitor() {
 	logger.LogStartup(moduleName)
 	go func() {
+
 		defer func() {
 			if r := recover(); r != nil {
 				logger.LogInfo(moduleName, fmt.Sprintf("program panicked! [%v]", r))
-				s.StartMonitor(wallets)
+				s.StartMonitor()
 				return
 			}
 		}()
-		if err := s.monitorWallets(wallets); err != nil {
-			logger.LogError(moduleName, err)
-		}
-		logger.LogShutDown(moduleName)
+
+		go s.Transactions.ParseTransactions()
+		s.Transactions.GetLatestBlock(0)
 	}()
 }
 
-// doesnt work
-func (s *Settings) monitorWallets(wallets []string) error {
-	ch := make(chan types.Log)
-	sub, err := utils.CreateSubscription(s.Client, utils.SliceToAddresses(wallets), ch)
-	if err != nil {
-		return err
-	}
+func (s *Settings) monitor() {
 
+}
+
+func (s *Settings) WatchPendingTransactions(address common.Address, ctx context.Context) {
 	for {
 		select {
-		case <-s.Context.Done():
-			return nil
-		case <-sub.Err():
-			return err
-		case log := <-ch:
-			if err = s.handleTxnInfo(log); err != nil {
+		case <-ctx.Done():
+			return
+		default:
 
-			}
 		}
 	}
 }
 
+func getPendingTxns() {}
+
 // monitorBalance monitors any balance changes on a specific address.
-func (s *Settings) monitorBalance(wallet common.Address) {
-	go func(address common.Address) {
+func (s *Settings) monitorBalance(wallet common.Address, retryDelay time.Duration, ctx context.Context) {
+	s.PromMetrics.GoroutineCount.Inc()
+	go func(address common.Address, delay time.Duration, ctx context.Context) {
 		for {
-			balance, err := utils.GetEthWalletBalance(s.Client, address)
-			if err != nil {
-				logger.LogError(moduleName, err)
-				continue
-			}
-
-			b, ok := s.BalanceWatcher.Balances[address]
-			if !ok {
-				s.BalanceWatcher.Balances[address] = balance
-				continue
-			}
-
-			if b != balance {
-				s.BalanceWatcher.Balances[address] = balance
-
-				var status string
-				var userInfo database.User
-				_ = userInfo
-				if balance.Int64() > b.Int64() {
-					status = "Increased"
-				} else {
-					status = "Decreased"
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				balanceNow, err := utils.GetEthWalletBalance(s.Client, address)
+				if err != nil {
+					logger.LogError(moduleName, err)
+					continue
 				}
 
-				ethBalanceBefore := utils.WeiToEther(b)
-				ethBalanceAfter := utils.WeiToEther(balance)
+				balanceBefore, ok := s.BalanceWatcher.Balances[address]
+				if !ok {
+					s.BalanceWatcher.Balances[address] = balanceNow
+					continue
+				}
 
-				/*
-					userInfo, err = s.DB.GetUser(address.String())
-					if err != nil {
-						logger.LogError(moduleName, err)
+				if balanceBefore != balanceNow {
+					s.BalanceWatcher.Balances[address] = balanceNow
+
+					var status string
+					var user *models.FriendTechMonitor
+					_ = user
+
+					if balanceNow.Int64() > balanceBefore.Int64() {
+						status = "Increased ↖︎"
+					} else {
+						status = "Decreased ↘︎"
 					}
-				*/
 
-				s.Bot.BotWebhook(&discordgo.MessageSend{
-					Embeds: []*discordgo.MessageEmbed{
-						{
-							Title: fmt.Sprintf("%s | Balance %s", address.String(), status),
+					ethBalanceBefore := utils.WeiToEther(balanceBefore)
+					ethBalanceAfter := utils.WeiToEther(balanceNow)
 
-							Fields: []*discordgo.MessageEmbedField{
-								{
-									Name:   "Address",
-									Value:  address.String(),
-									Inline: true,
-								},
-								{
-									Name:   "Ξ Balance BF/AF",
-									Value:  fmt.Sprintf("%2.f | %2.f", ethBalanceBefore, ethBalanceAfter),
-									Inline: true,
-								},
-								{
-									Name:   "QuickLink",
-									Value:  bot.BundleQuickLinks(address.String()),
-									Inline: false,
+					user, err = s.DB.Monitor.GetUserByAddress(address.String(), context.Background())
+					if err != nil {
+						// check if it's stored
+						switch err.Error() {
+						case "":
+						case "d":
+						}
+
+					}
+
+					s.Bot.BotWebhook(&discordgo.MessageSend{
+						Components: bot.BundleQuickTaskComponents("", ""),
+						Embeds: []*discordgo.MessageEmbed{
+							{
+								Color:       bot.Purple,
+								Title:       fmt.Sprintf("%s Balance's %s", utils.FirstLastFour(wallet.String()), status),
+								Description: fmt.Sprintf(""),
+								Fields: []*discordgo.MessageEmbedField{
+									{
+										Name:   "Balance Status",
+										Value:  status,
+										Inline: true,
+									},
+									{
+										Name:   "Balance After",
+										Value:  fmt.Sprintf("%3.f", ethBalanceAfter),
+										Inline: true,
+									},
+									{
+										Name:   "Balance Before",
+										Value:  fmt.Sprintf("%3.f", ethBalanceBefore),
+										Inline: true,
+									},
+									{},
 								},
 							},
 						},
-					},
-				}, nil, bot.BalanceChange)
+					}, "")
+				}
+				time.Sleep(retryDelay)
 			}
-
-			time.Sleep(2500 * time.Millisecond)
 		}
-	}(wallet)
+	}(wallet, retryDelay, ctx)
 }
 
 // todo finish handling & rename func mby
@@ -147,12 +154,11 @@ func (s *Settings) handleTxnInfo(log types.Log) error {
 	return nil
 }
 
-// OK
-func (t *Transactions) GetLatestBlock() error {
+func (t *Transactions) GetLatestBlock(delay time.Duration) {
 	for {
 		latestBlock, err := t.Client.BlockByNumber(context.Background(), nil)
 		if err != nil {
-			return err
+			continue
 		}
 
 		if latestBlock.NumberU64() == t.LatestBlock {
@@ -161,15 +167,28 @@ func (t *Transactions) GetLatestBlock() error {
 
 		t.LatestBlock = latestBlock.NumberU64()
 		t.LatestBlockChan <- latestBlock
+
+		time.Sleep(delay)
 	}
 }
 
-// OK todo finish func
 func (t *Transactions) ParseTransactions() {
-	block := <-t.LatestBlockChan
-	go func(latestBlock *types.Block) {
-		for _, txns := range latestBlock.Transactions() {
+	for {
+		block := <-t.LatestBlockChan
+		go func(latestBlock *types.Block) {
+			for _, tx := range latestBlock.Transactions() {
+				go t.handleTransaction(tx)
+			}
+		}(block)
+	}
+}
 
-		}
-	}(block)
+func (t *Transactions) handleTransaction(tx *types.Transaction) {}
+
+func (t *Transactions) isGreater(input any) {
+
+}
+
+func (s *Settings) SetParam(address common.Address, txnParams *TransactionsParams) {
+	s.Transactions.Params.Set(address, txnParams)
 }

@@ -1,26 +1,26 @@
 package indexer
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	http "github.com/bogdanfinn/fhttp"
 	"github.com/weeaa/nft/database/db"
-	"github.com/weeaa/nft/modules/friendtech"
+	"github.com/weeaa/nft/database/models"
+	"github.com/weeaa/nft/modules/friendtech/constants"
 	"github.com/weeaa/nft/modules/friendtech/utils"
-	"github.com/weeaa/nft/modules/twitter"
 	"github.com/weeaa/nft/pkg/files"
 	"github.com/weeaa/nft/pkg/logger"
 	"github.com/weeaa/nft/pkg/tls"
 	"io"
 	"net/url"
-	"strconv"
 	"time"
 )
 
 const indexer = "Friend Tech Indexer"
 
-func New(db *db.DB, proxyFilePath string, rotateEachReq bool) (*Indexer, error) {
-	f, err := files.ReadJSON[map[string]int]("latestUserID.json")
+func New(db *db.DB, proxyFilePath string, rotateEachReq bool, delay time.Duration) (*Indexer, error) {
+	f, err := files.ReadJSON[map[string]uint]("id.json")
 	if err != nil {
 		return nil, err
 	}
@@ -30,10 +30,15 @@ func New(db *db.DB, proxyFilePath string, rotateEachReq bool) (*Indexer, error) 
 		return nil, err
 	}
 
+	if f["id"] < 11 {
+		return nil, fmt.Errorf("UserID can't be below 11 (%d)", f["id"])
+	}
+
 	return &Indexer{
-		UserCounter:   f["id"],
+		userCounter:   f["id"],
 		DB:            db,
 		ProxyList:     proxyList,
+		Delay:         delay,
 		Client:        tls.New(tls.RandProxyFromList(proxyList)),
 		RotateEachReq: rotateEachReq,
 	}, nil
@@ -44,11 +49,10 @@ func (s *Indexer) StartIndexer() {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				logger.LogError(indexer, fmt.Errorf(""))
+				logger.LogError(indexer, fmt.Errorf("panic recovered: %v", r))
 				s.StartIndexer()
 			}
 		}()
-
 		s.Index()
 	}()
 }
@@ -59,37 +63,31 @@ func (s *Indexer) Index() {
 	for {
 		req := &http.Request{
 			Method: http.MethodGet,
-			URL:    &url.URL{Scheme: "https", Host: fren_utils.ProdBaseApi, Path: "/users/by-id/" + fmt.Sprint(s.UserCounter)},
-			Host:   fren_utils.ProdBaseApi,
-			Header: http.Header{},
+			URL:    &url.URL{Scheme: "https", Host: constants.ProdBaseApi, Path: "/users/by-id/" + fmt.Sprint(s.userCounter)},
+			Host:   constants.ProdBaseApi,
+			Header: http.Header{
+				"user-agent": {constants.IphoneUserAgent},
+			},
 		}
 
 		resp, err := s.Client.Do(req)
 		if err != nil {
 			logger.LogError(indexer, err)
-			time.Sleep(5 * time.Second)
+			time.Sleep(DefaultDelay)
 			continue
 		}
 
 		if resp.StatusCode != http.StatusOK {
 			if resp.StatusCode == http.StatusNotFound {
-				logger.LogError(indexer, fmt.Errorf("status not found for id: %d", s.UserCounter))
-				time.Sleep(4 * time.Second)
+				// logger.LogError(indexer, fmt.Errorf("status not found for id: %d", s.userCounter))
+				time.Sleep(s.Delay)
 				continue
 			} else if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == http.StatusForbidden {
 				tls.HandleRateLimit(s.Client, s.ProxyList, indexer)
 				continue
 			}
-			logger.LogError(indexer, fmt.Errorf("status %s for id: %d", resp.Status, s.UserCounter))
 			time.Sleep(10 * time.Second)
 			continue
-		}
-
-		if s.RotateEachReq && resp.StatusCode != http.StatusForbidden {
-			if err = tls.RotateProxy(s.Client, s.ProxyList); err != nil {
-				logger.LogError(indexer, err)
-				continue
-			}
 		}
 
 		body, err := io.ReadAll(resp.Body)
@@ -98,7 +96,7 @@ func (s *Indexer) Index() {
 			continue
 		}
 
-		var u friendtech.UserInformation
+		var u fren_utils.UserInformation
 		if err = json.Unmarshal(body, &u); err != nil {
 			logger.LogError(indexer, err)
 			continue
@@ -109,46 +107,41 @@ func (s *Indexer) Index() {
 			continue
 		}
 
-		var nitter twitter.NitterResponse
-		var importance fren_utils.Importance
-
-		{
-			nitter, err = twitter.FetchNitter(u.TwitterName, s.Client)
-			if err != nil {
-				logger.LogError(indexer, err)
-				continue
-			}
-
-			followers, _ := strconv.Atoi(nitter.Followers)
-
-			importance = fren_utils.AssertImportance(followers, fren_utils.Followers)
-			if err != nil {
-				logger.LogError(indexer, err)
-				continue
-			}
+		if err = s.DB.Indexer.InsertUser(&models.FriendTechIndexer{UserID: fmt.Sprint(u.Id), BaseAddress: u.Address}, context.Background()); err != nil {
+			logger.LogError(indexer, err)
+		} else {
+			logger.LogInfo(indexer, fmt.Sprintf("inserted %d | %s", u.Id, u.TwitterName))
 		}
 
-		_ = importance
+		s.userCounter++
 
-		//todo move to API req rather as it will be ran on diff programs
-		/*
-			if err = s.DB.InsertFriendTechIndexer(&database.FriendTechIndexer{
-				BaseAddress: u.Address,
-				UserID:      fmt.Sprint(u.Id),
-			}, context.Background()); err != nil {
-				logger.LogError(indexer, err)
-				continue
-			}
-		*/
-
-		logger.LogInfo(indexer, fmt.Sprintf("inserted %d | %s", u.Id, u.TwitterName))
-
-		s.UserCounter++
-
-		if err = files.WriteJSON("latestUserID.json", map[string]int{"id": u.Id}); err != nil {
+		if err = files.WriteJSON("id.json", map[string]int{"id": u.Id}); err != nil {
 			logger.LogError(indexer, err)
 		}
 
-		time.Sleep(3 * time.Second)
+		if s.RotateEachReq {
+			if err = tls.RotateProxy(s.Client, s.ProxyList); err != nil {
+				logger.LogError(indexer, err)
+				continue
+			}
+		}
+
+		time.Sleep(s.Delay)
 	}
 }
+
+/*
+	nitter, err := s.NitterClient.FetchNitter(u.TwitterName)
+	if err != nil {
+		logger.LogError(indexer, err)
+		continue
+	}
+
+	followers, _ := strconv.Atoi(nitter.Followers)
+
+	importance := fren_utils.AssertImportance(followers, fren_utils.Followers)
+	if err != nil {
+		logger.LogError(indexer, err)
+		continue
+	}
+*/

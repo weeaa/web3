@@ -23,6 +23,8 @@ func New(db *db.DB) (*Bot, error) {
 
 	bot := &Bot{s, db}
 
+	go bot.routineCheck()
+
 	s.AddHandler(bot.onReady)
 	s.AddHandler(bot.onRoleReactionAdd)
 	s.AddHandler(bot.onRoleReactionRemove)
@@ -32,6 +34,11 @@ func New(db *db.DB) (*Bot, error) {
 	s.Identify.Intents = discordgo.IntentsGuildMessageReactions
 
 	return bot, nil
+}
+
+func (b *Bot) routineCheck() {
+	b.registerCommands()
+	b.checkIfMsgSent()
 }
 
 func (b *Bot) Start() error {
@@ -47,9 +54,6 @@ func (b *Bot) onReady(s *discordgo.Session, r *discordgo.Event) {
 		log.Error(err)
 		return
 	}
-
-	b.checkIfMsgSent()
-	b.registerCommands()
 }
 
 func (b *Bot) checkIfMsgSent() {
