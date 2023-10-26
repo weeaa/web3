@@ -16,7 +16,7 @@ var credentials = map[string]string{
 }
 
 func InitRoutes(router *gin.Engine, traderService *services.UserService) {
-	apiGroup := router.Group("/v1", gin.BasicAuth(map[string]string{"allieontopofnobsious@allierobotics.com": "JiaJWbAwillBeari17HajMapoei"}))
+	apiGroup := router.Group("/v1", gin.BasicAuth(credentials))
 	{
 		groups.InitUserRoutes(apiGroup, wireTraderHandler(traderService))
 	}
