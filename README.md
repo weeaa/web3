@@ -18,10 +18,10 @@ Should you want to reach out, please do so on Discord at **weeaa**. 🤙🏻
     - [x] Pending Deposits w/ filters
     - [x] Invite Redeemer
     - [x] Watchlist Adder
-    - [x] [Sniper](https://www.friend.tech/rooms/0xe5d60f8324d472e10c4bf274dbb7371aa93034a0) (Access for FriendTech Holders only, gotta keep it competitive 🫶🏻)
+    - [x] [Sniper](https://www.friend.tech/rooms/0xe5d60f8324d472e10c4bf274dbb7371aa93034a0)
 - Stars Arena
-    - [ ] Monitors 🤓 (Live for my FriendTech Holders!)
-    - [ ] Sniper (Live for my FriendTech Holders!)
+    - [ ] Monitors
+    - [ ] Sniper
 - DeFi
     - Uniswap
         - [ ] V2 Swap
@@ -49,7 +49,7 @@ Should you want to reach out, please do so on Discord at **weeaa**. 🤙🏻
 - Premint Monitoring
   - [ ] Hype Weekly/Daily Raffles (Premint NFT Required) – (needs fixes)
 - Bitcoin
-  - [x] Unisat BRC20 Hype Mint Monitor
+  - [x] Unisat BRC20 Hype Mint Monitor (Discontinued due to header encryption, cba)
   - [x] Fees Monitor
   - [ ] Unisat BRC20 Minter (thoon)
 - Wallet Watchers
@@ -67,24 +67,23 @@ https://github.com/weeaa/web3/assets/108926252/3e997152-29af-4bfb-93db-ee217a221
 
 ## ⚒️ Project Setup
 
-Here is how your `.env` file should be looking like, you can omit `NODE_WSS_URL` & `NODE_HTTP_URL`.
+Here is how your `.env` file should be looking like, these values are mainly used for testing purposes.
 
 ```ini
-# Not Mandatory
+# base nodes 👇
 NODE_WSS_URL=
 NODE_HTTP_URL=
-# API (Mandatory)
-BASIC_USERNAME=email@gmail.com
-BASIC_PASSWORD=nYp@SsWW0rD
-# END
-BOT_TOKEN=discordBotToken
+BASIC_USERNAME=
+BASIC_PASSWORD=
+BOT_TOKEN=
 PSQL_PORT=
 PSQL_USERNAME=
 PSQL_PASSWORD=
 PSQL_DB_NAME=
+FT_BEARER_TOKEN=
 ```
 
-In the `scripts` folder, you may find a `db.sh` bash script which will create a table and a database upon request. Follow instructions below.
+Within the scripts directory, you will find a db.sh Bash script that, upon request, generates a database and a table. Please refer to the instructions provided below.
 
 ```bash
 $ chmod +x ./scripts/db.sh
@@ -92,16 +91,16 @@ $ ./scripts/db.sh
 ```
 
 ## 🫶🏻 Tips
-- Note that proxies are mandatory for Friend Tech New Users (off-chain stuff, if ran at high speed will need proxies for FT) as they ban you on average at the ~90th request you do on the same IP – they only ban temporarily tho. My current setup is 1k ISP and it runs perfectly, with bans being resolved in 1s as you can see on the demo. Residential proxies will be costly, I advise to have a pool of DCs or ISPs. I may add delay in future updates so run it at the pace you want.
+- Please be aware that for new users of Friend Tech, the use of proxies is essential. Friend Tech tends to impose temporary bans on the same IP address after approximately 90 requests. In my current configuration, I have 1K ISP proxies in place, with bans typically resolved within one second, as demonstrated in the video above.
 
-- You need WSS & HTTP RPCs (commonly named nodes) to monitor on-chain, free ones work well.
+- You need WSS & HTTP RPCs (commonly named nodes) to monitor on-chain, free ones work well but are subject to rate limits.
     - [Base RPCs](https://docs.base.org/tools/node-providers/)
-
-- It is advised to run on a server if you run the Friend Tech New Users Monitor as it gets network intensive sometimes.
 
 ### Examples
 
-There are various examples which can be found in the [/examples](https://github.com/weeaa/web3/tree/main/examples) folder.
+There are various examples which can be found in the [/examples](https://github.com/weeaa/web3/tree/main/examples) folder. In order to build a binary, [Go](https://go.dev/doc/install) 1.20 or higher is required.
+
+After Go is installed, `git clone` the repository and `cd` in `examples/~` (wherever you want) and execute `go build yourfilename.go`.
 
 ## Credits
 
