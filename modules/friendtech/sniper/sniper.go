@@ -263,6 +263,7 @@ func (s *Sniper) CreateLimitBuyOrder(address string, shareMaxPrice *big.Int, exp
 	return nil
 }
 
+// why? cause some persons may run "snipers" wallets, and these don't exist on Friend Tech.
 func validateAddress(address string) (fren_utils.UserInformation, error) {
 	return fren_utils.GetUserInformation(address, tls.NewProxyLess())
 }

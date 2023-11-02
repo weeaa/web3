@@ -7,6 +7,7 @@ import (
 
 func InitUserRoutes(router *gin.RouterGroup, controller *controllers.UserController) {
 	user := router.Group("/user")
+
 	{
 		user.GET("", controller.Get)
 		user.PUT("", controller.Update)

@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"fmt"
 	"github.com/weeaa/nft/pkg/logger"
 	"github.com/weeaa/nft/pkg/rpc/pb"
 	"google.golang.org/grpc"
@@ -11,6 +10,8 @@ import (
 )
 
 const DefaultPort = ":9000"
+
+const grpcModule = "grpc"
 
 type ProtoServer struct {
 	Server *grpc.Server
@@ -30,7 +31,7 @@ func NewServer(port string) (*ProtoServer, error) {
 
 	go func() {
 		if err = server.Serve(lis); err != nil {
-			logger.LogFatal("grpc", err.Error())
+			logger.LogFatal(grpcModule, err.Error())
 		}
 	}()
 
@@ -49,13 +50,14 @@ func NewClient() (*ProtoClient, error) {
 func (ps *ProtoServer) Broadcast(message any) error {
 
 	stream := pb.Event{}
-
+	_ = stream
 	return nil
 }
 
-func SendMessage(stream pb.Service_SendMessageServer) error {
+func (ps *ProtoServer) SendMessage(stream pb.Service_SendMessageServer) error {
 	for {
 		message, err := stream.Recv()
+		_ = message
 		if err == io.EOF {
 			// Client has closed the stream.
 			return nil
@@ -73,7 +75,8 @@ func SendMessage(stream pb.Service_SendMessageServer) error {
 		}
 
 		for _, event := range events {
-			if err := stream.Send(&pb.Message{Message: }); err != nil {
+			_ = event
+			if err := stream.Send(&pb.Message{Message: ""}); err != nil {
 				return err
 			}
 		}

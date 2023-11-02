@@ -16,7 +16,6 @@ func isAllowed(i *discordgo.InteractionCreate, s *discordgo.Session) error {
 		return err
 	}
 
-	// Check if the user has any of the required roles
 	hasRequiredRole := false
 	for _, userRole := range member.Roles {
 		if userRole == "1156498768322117664" {

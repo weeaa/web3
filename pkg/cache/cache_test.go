@@ -19,7 +19,7 @@ func TestCacheInitialize(t *testing.T) {
 
 func TestCacheInsertData(t *testing.T) {
 	handler := Initialize(DefaultPort)
-	handler.InsertData(key, value, time.Second*4)
+	handler.Client.Set(key, value, time.Second*4)
 	val, err := handler.Client.Get(key).Result()
 	if err != nil || val != value {
 		t.Errorf("expected value to be 'value', but got '%s'", val)
@@ -29,7 +29,7 @@ func TestCacheInsertData(t *testing.T) {
 func TestCacheRetrieveData(t *testing.T) {
 	handler := Initialize(DefaultPort)
 	handler.Client.Set(key, value, time.Second*4)
-	val, err := handler.RetrieveData(key).Result()
+	val, err := handler.Client.Get(key).Result()
 	if err != nil || val != value {
 		t.Errorf("expected value to be 'value', but got '%s'", val)
 	}

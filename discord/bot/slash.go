@@ -5,13 +5,9 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/weeaa/nft/pkg/api"
 	"github.com/weeaa/nft/pkg/logger"
-	"github.com/weeaa/nft/pkg/tls"
-	"log"
 )
 
 var (
-	discordHttpClient = tls.NewProxyLess()
-
 	commands = []*discordgo.ApplicationCommand{
 		{
 			Name:        "add_user",
@@ -42,12 +38,11 @@ var (
 
 // registerCommands registers slash commands.
 func (b *Bot) registerCommands() {
-
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
-	for i, v := range commands {
-		cmd, err := b.s.ApplicationCommandCreate(b.s.State.User.ID, GuildID, v)
+	for i, command := range commands {
+		cmd, err := b.s.ApplicationCommandCreate(b.s.State.User.ID, GuildID, command)
 		if err != nil {
-			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
+			logger.LogError(discord, fmt.Errorf("cannot create [%s] command: %w", command.Name, err))
 		}
 		registeredCommands[i] = cmd
 	}
@@ -71,7 +66,7 @@ func (b *Bot) onSlashCommand(s *discordgo.Session, i *discordgo.InteractionCreat
 
 		// add to database & start monitoring
 
-		msgSend := &discordgo.MessageSend{
+		_, err := b.s.ChannelMessageSendComplex(FriendTechFeed, &discordgo.MessageSend{
 			Embeds: []*discordgo.MessageEmbed{
 				{
 					Title:       "🔔 | New User Added",
@@ -83,26 +78,11 @@ func (b *Bot) onSlashCommand(s *discordgo.Session, i *discordgo.InteractionCreat
 					},
 				},
 			},
-		}
-
-		_, err := b.s.ChannelMessageSendComplex(FriendTechFeed, msgSend)
+		})
 		if err != nil {
-			logger.LogError(discord, err)
-			return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Flags:   discordgo.MessageFlagsEphemeral,
-					Content: "❌ " + err.Error(),
-				},
-			})
+			return b.ReturnErrorInteraction(i, err)
 		} else {
-			return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Flags:   discordgo.MessageFlagsEphemeral,
-					Content: "✅",
-				},
-			})
+			return b.ReturnConfirmationInteraction(i)
 		}
 
 	case "add_user":
@@ -112,49 +92,31 @@ func (b *Bot) onSlashCommand(s *discordgo.Session, i *discordgo.InteractionCreat
 			optionMap[opt.Name] = opt
 		}
 
-		args := make([]interface{}, 0, len(options))
-		if option, ok := optionMap["base_address"]; ok {
-			args = append(args, option.StringValue())
-		}
-
-		userInfo, err := api.AddUserToMonitor(optionMap["base_address"].StringValue(), "")
+		userInfo, err := api.AddUserToMonitor(optionMap["base_address"].StringValue(), "weeaa")
 		if err != nil {
-			return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Flags:   discordgo.MessageFlagsEphemeral,
-					Content: err.Error(),
-				},
-			})
+			return b.ReturnErrorInteraction(i, err)
 		}
 
-		msgSend := &discordgo.MessageSend{
-			Embeds: []*discordgo.MessageEmbed{{
-				Title:       "🎩 | add_user",
-				Description: fmt.Sprintf("**[%s](https://x.com/%s)** is now monitored on Friend Tech.\n\n__Audit__\n > Imp. Status: **%s**\n> Followers: **%s**\n> ChatRoom: **[Link](https://www.friend.tech/rooms/%s)**", userInfo["twitter_name"], userInfo["twitter_username"], fmt.Sprint(userInfo["status"]), fmt.Sprint(userInfo["followers"]), optionMap["base_address"].StringValue()),
-				Color:       Purple,
-				Thumbnail: &discordgo.MessageEmbedThumbnail{
-					URL: fmt.Sprint(userInfo["image"]),
+		if _, err = b.s.ChannelMessageSendComplex(FriendTechFeed, &discordgo.MessageSend{
+			Embeds: []*discordgo.MessageEmbed{
+				{
+					Title:       "🎩 | add_user",
+					Description: fmt.Sprintf("**[%s](https://x.com/%s)** is now monitored on Friend Tech.\n\n__Audit__\n > Imp. Status: **%s**\n> Followers: **%s**\n> ChatRoom: **[Link](https://www.friend.tech/rooms/%s)**", userInfo["twitter_name"], userInfo["twitter_username"], fmt.Sprint(userInfo["status"]), fmt.Sprint(userInfo["followers"]), optionMap["base_address"].StringValue()),
+					Color:       Purple,
+					Thumbnail: &discordgo.MessageEmbedThumbnail{
+						URL: fmt.Sprint(userInfo["image"]),
+					},
+					Footer: &discordgo.MessageEmbedFooter{
+						Text:    fmt.Sprintf("@friendtech — feed [%s]", optionMap["base_address"].StringValue()),
+						IconURL: "https://camo.githubusercontent.com/a0d06e6da8dcc033e33c2694eb550ffb775a3f805c7e2edd55758275a0862dd4/68747470733a2f2f63646e2e646973636f72646170702e636f6d2f6174746163686d656e74732f3638393036333238303335383036343135382f313133393533383030323034313839373034312f696d6167652e706e67",
+					},
 				},
-				Footer: &discordgo.MessageEmbedFooter{
-					Text:    fmt.Sprintf("@friendtech — feed [%s]", optionMap["base_address"].StringValue()),
-					IconURL: "https://camo.githubusercontent.com/a0d06e6da8dcc033e33c2694eb550ffb775a3f805c7e2edd55758275a0862dd4/68747470733a2f2f63646e2e646973636f72646170702e636f6d2f6174746163686d656e74732f3638393036333238303335383036343135382f313133393533383030323034313839373034312f696d6167652e706e67",
-				},
-			}},
-		}
-
-		_, err = b.s.ChannelMessageSendComplex(FriendTechFeed, msgSend)
-		if err != nil {
-			logger.LogError(discord, err)
-		}
-
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Flags:   discordgo.MessageFlagsEphemeral,
-				Content: "✅",
 			},
-		})
+		}); err != nil {
+			return b.ReturnErrorInteraction(i, err)
+		}
+
+		return b.ReturnConfirmationInteraction(i)
 	default:
 		return fmt.Errorf("unknown slash command")
 	}

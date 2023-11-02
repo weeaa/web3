@@ -1,11 +1,10 @@
 package utils
 
 import (
-	"encoding/json"
 	"fmt"
 	http "github.com/bogdanfinn/fhttp"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"io"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -36,7 +35,17 @@ func GetABI(chain Chain, apiKey string) (abi.ABI, error) {
 
 	switch chain {
 	case Ethereum:
+		req.URL = &url.URL{
+			Scheme: "https",
+			Host:   "",
+			Path:   "",
+		}
 	case AvalancheC:
+		req.URL = &url.URL{
+			Scheme: "https",
+			Host:   "",
+			Path:   "",
+		}
 	}
 
 	resp, err := http.DefaultClient.Do(req)
@@ -50,15 +59,5 @@ func GetABI(chain Chain, apiKey string) (abi.ABI, error) {
 		return abi.ABI{}, fmt.Errorf("getting abi invalid resp status: %s", resp.Status)
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-
-	}
-
-	var response map[string]string
-	if err = json.Unmarshal(body, &response); err != nil {
-
-	}
-
-	return abi.ABI{}, nil
+	return abi.JSON(resp.Body)
 }

@@ -1,9 +1,9 @@
 package bot
 
 import (
+	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/weeaa/nft/pkg/logger"
-	"log"
 )
 
 var EmojiRoleMap = map[string]string{
@@ -28,36 +28,34 @@ func (b *Bot) messageRoleChannel() {
 
 	msgSend := &discordgo.MessageSend{
 		Embeds: []*discordgo.MessageEmbed{embed},
-		//Components: components,
 	}
 
 	m, err := b.s.ChannelMessageSendComplex(RolesChannel, msgSend)
 	if err != nil {
-		logger.LogError(discord, err)
+		logger.LogError(discord, fmt.Errorf("error sending role embed: %w", err))
+		return
 	}
 
 	for em := range EmojiRoleMap {
-		b.s.MessageReactionAdd(RolesChannel, m.ID, em)
+		_ = b.s.MessageReactionAdd(RolesChannel, m.ID, em)
 	}
 
 }
 
 func (b *Bot) onRoleReactionAdd(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
-
 	if roleID, ok := EmojiRoleMap[r.Emoji.Name]; ok {
 		err := s.GuildMemberRoleAdd(r.GuildID, r.UserID, roleID)
 		if err != nil {
-			log.Println("Error adding role to user:", err)
+			logger.LogError(discord, fmt.Errorf("error adding role to user: %w", err))
 		}
 	}
 }
 
 func (b *Bot) onRoleReactionRemove(s *discordgo.Session, r *discordgo.MessageReactionRemove) {
-
 	if roleID, ok := EmojiRoleMap[r.Emoji.Name]; ok {
 		err := s.GuildMemberRoleRemove(r.GuildID, r.UserID, roleID)
 		if err != nil {
-			log.Println("Error removing role from user:", err)
+			logger.LogError(discord, fmt.Errorf("error removing role to user: %w", err))
 		}
 	}
 }

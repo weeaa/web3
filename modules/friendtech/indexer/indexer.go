@@ -3,6 +3,7 @@ package indexer
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	http "github.com/bogdanfinn/fhttp"
 	"github.com/weeaa/nft/database/db"
@@ -14,15 +15,32 @@ import (
 	"github.com/weeaa/nft/pkg/tls"
 	"io"
 	"net/url"
+	"os"
+	"strings"
 	"time"
 )
 
 const indexer = "Friend Tech Indexer"
 
-func New(db *db.DB, proxyFilePath string, rotateEachReq bool, delay time.Duration) (*Indexer, error) {
-	f, err := files.ReadJSON[map[string]uint]("id.json")
+func New(db *db.DB, proxyFilePath string, rotateEachReq bool, delay time.Duration, filePath string) (*Indexer, error) {
+	if !strings.Contains(filePath, "json") {
+		s := strings.SplitAfter(filePath, ".")
+		return nil, fmt.Errorf("expected json formatted file, got %s", s[len(s)-1])
+	}
+
+	f, err := files.ReadJSON[map[string]uint](filePath)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, os.ErrNotExist) {
+			files.CreateFile(filePath)
+
+			if err = files.WriteJSON(filePath, map[string]int{
+				"id": 11,
+			}); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
 	}
 
 	proxyList, err := tls.ReadProxyFile(proxyFilePath)
@@ -31,7 +49,7 @@ func New(db *db.DB, proxyFilePath string, rotateEachReq bool, delay time.Duratio
 	}
 
 	if f["id"] < 11 {
-		return nil, fmt.Errorf("UserID can't be below 11 (%d)", f["id"])
+		return nil, fmt.Errorf("[%s] id can't be below 11 (got %d)", filePath, f["id"])
 	}
 
 	return &Indexer{
@@ -79,7 +97,6 @@ func (s *Indexer) Index() {
 
 		if resp.StatusCode != http.StatusOK {
 			if resp.StatusCode == http.StatusNotFound {
-				// logger.LogError(indexer, fmt.Errorf("status not found for id: %d", s.userCounter))
 				time.Sleep(s.Delay)
 				continue
 			} else if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == http.StatusForbidden {
@@ -107,7 +124,7 @@ func (s *Indexer) Index() {
 			continue
 		}
 
-		if err = s.DB.Indexer.InsertUser(&models.FriendTechIndexer{UserID: fmt.Sprint(u.Id), BaseAddress: u.Address}, context.Background()); err != nil {
+		if err = s.DB.Indexer.InsertUser(&models.FriendTechIndexer{UserID: fmt.Sprint(u.Id), BaseAddress: u.Address, TwitterUsername: u.TwitterUsername}, context.Background()); err != nil {
 			logger.LogError(indexer, err)
 		} else {
 			logger.LogInfo(indexer, fmt.Sprintf("inserted %d | %s", u.Id, u.TwitterName))
@@ -129,19 +146,3 @@ func (s *Indexer) Index() {
 		time.Sleep(s.Delay)
 	}
 }
-
-/*
-	nitter, err := s.NitterClient.FetchNitter(u.TwitterName)
-	if err != nil {
-		logger.LogError(indexer, err)
-		continue
-	}
-
-	followers, _ := strconv.Atoi(nitter.Followers)
-
-	importance := fren_utils.AssertImportance(followers, fren_utils.Followers)
-	if err != nil {
-		logger.LogError(indexer, err)
-		continue
-	}
-*/

@@ -34,8 +34,14 @@ var (
 	PremintChannel = os.Getenv("PREMINT_WEBHOOK")
 )
 
+type RoleType string
+
+var (
+	FriendTechType RoleType
+)
+
 // FriendTech Channels
-const (
+var (
 	FriendTech      = "friendTech"
 	FriendTechImage = "https://content.fortune.com/wp-content/uploads/2023/08/friend.tech-logo.jpg"
 

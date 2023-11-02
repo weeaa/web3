@@ -110,7 +110,6 @@ func DecodeTransactionInputData(contractABI abi.ABI, txData string) (map[string]
 }
 
 func EthToUsd(ethAmount string) (string, error) {
-
 	rate, err := FetchRate(ethAmount)
 	if err != nil {
 		return "", err
@@ -175,8 +174,6 @@ func DisperseEthFunds(privateKey string, addresses []common.Address, amount *big
 			return transactions, err
 		}
 
-		//value := big.NewInt(1000000000000000000) // in wei (1 eth)
-		//gasLimit := uint64(21000)                // in units
 		gasPrice, err := client.SuggestGasPrice(context.Background())
 		if err != nil {
 			return transactions, err

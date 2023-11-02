@@ -14,7 +14,6 @@ func NewClient(
 	footerImage string,
 	color int) *Client {
 	return &Client{
-
 		FooterImage: footerImage,
 		FooterText:  footerText,
 		Color:       color,
@@ -27,7 +26,6 @@ func Push(data []byte, webhookURL string) error {
 	var err error
 
 	for {
-
 		resp, err = http.Post(webhookURL, "application/json", bytes.NewBuffer(data))
 		if err != nil {
 			return err

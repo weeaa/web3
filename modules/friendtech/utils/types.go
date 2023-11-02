@@ -20,6 +20,14 @@ var (
 )
 
 var (
+	Thresholds = []int{
+		5000,
+		10000,
+		50000,
+	}
+)
+
+var (
 	Balance   ImpType = "balance"
 	Followers ImpType = "followers"
 )

@@ -170,20 +170,19 @@ func GetUserInformation(address string, client tls_client.HttpClient) (UserInfor
 }
 
 // AssertImportance assigns a status.
-func AssertImportance(t any, impType ImpType) Importance {
+func AssertImportance(t, v any, impType ImpType) Importance {
 	const none = "none"
 	switch impType {
 	case Followers:
+
+		switch {
+		case "friend tech":
+		}
+
 		n, ok := t.(int)
 		if !ok {
 			log.Println("is not an int")
 			return none
-		}
-
-		thresholds := []int{
-			5000,
-			10000,
-			50000,
 		}
 
 		// if superior to 5k is shrimp
@@ -227,3 +226,5 @@ func AssertImportance(t any, impType ImpType) Importance {
 		return none
 	}
 }
+
+func AssertChannelID() {}

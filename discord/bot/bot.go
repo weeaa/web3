@@ -5,6 +5,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/charmbracelet/log"
 	"github.com/weeaa/nft/database/db"
+	"github.com/weeaa/nft/pkg/logger"
 	"os"
 )
 
@@ -19,7 +20,7 @@ func New(db *db.DB) (*Bot, error) {
 		return nil, err
 	}
 
-	log.Info("Discord Bot Ready ✅")
+	logger.LogInfo(discord, "Bot Ready")
 
 	bot := &Bot{s, db}
 
@@ -62,6 +63,7 @@ func (b *Bot) checkIfMsgSent() {
 	}
 }
 
+// getMessages function verifies whether a prior embed was sent with a particular title.
 func (b *Bot) getMessages(channel, expected string) bool {
 	messages, err := b.s.ChannelMessages(channel, 10, "", "", "")
 	if err != nil {
@@ -81,16 +83,13 @@ func (b *Bot) getMessages(channel, expected string) bool {
 
 func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if err := b.handleInteraction(s, i); err != nil {
-		log.Error(err)
-
-		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		if err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Flags:   discordgo.MessageFlagsEphemeral,
-				Content: fmt.Sprintf("something went wrong: %s", err),
+				Content: fmt.Sprintf("something went wrong: %s", err.Error()),
 			},
-		})
-		if err != nil {
+		}); err != nil {
 			log.Error(err)
 		}
 	}

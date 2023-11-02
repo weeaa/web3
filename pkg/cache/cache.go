@@ -21,11 +21,3 @@ func Initialize(port string) *Handler {
 		DB:       0,
 	})}
 }
-
-func (h *Handler) InsertData(k string, v any, exp time.Duration) {
-	h.Client.Set(k, v, exp)
-}
-
-func (h *Handler) RetrieveData(k string) *redis.StringCmd {
-	return h.Client.Get(k)
-}
