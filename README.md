@@ -94,7 +94,7 @@ $ ./scripts/run.sh
 
 windows ⊞
 ```bat
-pussy
+soon
 ```
 
 
