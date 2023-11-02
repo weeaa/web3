@@ -67,15 +67,16 @@ https://github.com/weeaa/web3/assets/108926252/3e997152-29af-4bfb-93db-ee217a221
 
 ## ⚒️ Project Setup
 
+### Environment
+
 Here is how your `.env` file should be looking like, these values are mainly used for testing purposes.
 
 ```ini
-# base nodes 👇
 NODE_WSS_URL=
 NODE_HTTP_URL=
 BASIC_USERNAME=
 BASIC_PASSWORD=
-BOT_TOKEN=
+BOT_TOKEN= <mandatory>
 PSQL_PORT=
 PSQL_USERNAME=
 PSQL_PASSWORD=
@@ -85,10 +86,17 @@ FT_BEARER_TOKEN=
 
 Within the scripts directory, you will find a db.sh Bash script that, upon request, generates a database and a table. Please refer to the instructions provided below.
 
+unix 
 ```bash
-$ chmod +x ./scripts/db.sh
-$ ./scripts/db.sh
+$ chmod +x ./scripts/run.sh
+$ ./scripts/run.sh
 ```
+
+windows ⊞
+```bat
+pussy
+```
+
 
 ## 🫶🏻 Tips
 - Please be aware that for new users of Friend Tech, the use of proxies is essential. Friend Tech tends to impose temporary bans on the same IP address after approximately 90 requests. In my current configuration, I have 1K ISP proxies in place, with bans typically resolved within one second, as demonstrated in the video above.
