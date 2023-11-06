@@ -8,7 +8,7 @@ import (
 	"github.com/gagliardetto/solana-go/rpc/ws"
 	"github.com/weeaa/nft/discord"
 	"github.com/weeaa/nft/pkg/logger"
-	"github.com/weeaa/nft/pkg/utils"
+	solana2 "github.com/weeaa/nft/pkg/utils/solana"
 )
 
 func NewClient(discord *discord.Client, nodeUrl string) (*Settings, error) {
@@ -46,7 +46,7 @@ func (s *Settings) StartMonitor(wallets []string) {
 }
 
 func (s *Settings) monitorWallets(wallets []string, ch chan error) error {
-	programs := utils.SliceToPrograms(wallets)
+	programs := solana2.SliceToPrograms(wallets)
 
 	for _, program := range programs {
 		go func(address solana.PublicKey) {

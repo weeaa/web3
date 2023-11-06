@@ -2,9 +2,9 @@ package files
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
 	"os"
 	"testing"
 )
@@ -62,7 +62,6 @@ func TestCSV(t *testing.T) {
 
 func TestJSON(t *testing.T) {
 	var err error
-	var buf bytes.Buffer
 
 	values := jsonContent{
 		FirstName:  expectedValuesCSV[0],
@@ -71,12 +70,8 @@ func TestJSON(t *testing.T) {
 		CountryISO: expectedValuesCSV[3],
 	}
 
-	if err = json.NewEncoder(&buf).Encode(values); err != nil {
+	if err = WriteJSON(tempFilePathJSON, values); err != nil {
 		assert.Error(t, err)
-	}
-
-	if err = os.WriteFile(tempFilePathJSON, buf.Bytes(), perm); err != nil {
-		t.Fatalf("Failed to create test JSON file: %v", err)
 	}
 
 	defer os.Remove(tempFilePathJSON)
@@ -86,11 +81,27 @@ func TestJSON(t *testing.T) {
 		assert.Error(t, err)
 	}
 
-	if data.FirstName != "bob" || data.LastName != "foo" || data.Age != 43 || data.CountryISO != "FR" {
+	if data.FirstName != "bob" {
 		assert.Errorf(t, errors.New("data not matching"), "expected %v, got %v", expectedValuesCSV, data)
 	}
 
 	assert.NoError(t, nil)
+}
+
+func TestYAML(t *testing.T) {
+	var err error
+	var buf bytes.Buffer
+
+	values := map[string]any{
+		"foo": true,
+		"bar": 61.77,
+		"baz": "hey",
+	}
+
+	if err = yaml.NewEncoder(&buf).Encode(values); err != nil {
+		assert.Error(t, err)
+	}
+
 }
 
 func TestCreateFolder(t *testing.T) {

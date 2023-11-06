@@ -39,7 +39,6 @@ if ! command -v go &> /dev/null; then
     curl -O "https://go.dev/dl/go1.21.3.$os.$go_package_format"
     tar -C /usr/local -xzf "go1.21.3.$os.$go_package_format"
     export PATH=$PATH:/usr/local/go/bin
-    echo "🦦 | Golang is now installed."
 fi
 
 # verify if psql is installed
@@ -49,7 +48,6 @@ if ! command -v psql &> /dev/null; then
       sudo apt update
     fi
     $psql_install_command
-    echo "🐘 | pSQL is now installed."
 fi
 
 # prompt the user for database inputs

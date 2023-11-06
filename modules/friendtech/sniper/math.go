@@ -24,4 +24,6 @@ func isSharePriceOk(maxUserInput *big.Float, sharePrice string) bool {
 	return sharePriceDec.GreaterThan(maxUserInputDec)
 }
 
-func calculateMaxFee(input *big.Int) {}
+func calculateMaxFee(input *big.Int) {
+
+}

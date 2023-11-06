@@ -67,6 +67,8 @@ var (
 	FriendTechWhalesSells = "1156884614871261214"
 
 	FriendTechAllLogs = "1161256468180381696"
+
+	FriendTechRugs = ""
 )
 
 // StarsArena Channels

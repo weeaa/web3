@@ -1,4 +1,4 @@
-package utils
+package abi_utils
 
 import (
 	"fmt"
@@ -16,8 +16,8 @@ var (
 	AvalancheC Chain = "avalanche-c"
 )
 
-func ReadABI(path string) (abi.ABI, error) {
-	file, err := os.ReadFile(path)
+func ReadABI(filePath string) (abi.ABI, error) {
+	file, err := os.ReadFile(filePath)
 	if err != nil {
 		return abi.ABI{}, err
 	}
@@ -29,7 +29,7 @@ func GenerateABI() abi.ABI {
 	return abi.ABI{}
 }
 
-// GetABI returns the ABI of a contract.
+// GetABI returns the ABI of a contract utilizing Etherscan platforms.
 func GetABI(chain Chain, apiKey string) (abi.ABI, error) {
 	req := &http.Request{}
 

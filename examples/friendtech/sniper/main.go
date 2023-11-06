@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/weeaa/nft/modules/friendtech/sniper"
 	"github.com/weeaa/nft/pkg/files"
-	"github.com/weeaa/nft/pkg/utils"
+	"github.com/weeaa/nft/pkg/utils/ethereum"
 	"log"
 	"math/big"
 	"os"
@@ -60,7 +60,7 @@ type Task struct {
 	MaxEthInput *big.Float `csv:"Max ETH Input"`
 	MaxBuys     uint       `csv:"Max Buys"`
 
-	Wallet *utils.EthereumWallet
+	Wallet *ethereum.Wallet
 }
 
 func loadTasks() ([]Task, error) {

@@ -1,4 +1,4 @@
-package utils
+package solana
 
 import (
 	"github.com/gagliardetto/solana-go"

@@ -3,7 +3,6 @@ package logger
 import (
 	"fmt"
 	"github.com/rs/zerolog/log"
-	//"github.com/charmbracelet/log"
 )
 
 func LogStartup(module string) {

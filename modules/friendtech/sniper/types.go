@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/weeaa/nft/pkg/safemap"
-	"github.com/weeaa/nft/pkg/utils"
+	"github.com/weeaa/nft/pkg/utils/ethereum"
 	"math/big"
 )
 
@@ -38,7 +38,7 @@ const (
 type Sniper struct {
 	PrivateKey string
 	HttpClient tls_client.HttpClient
-	Wallet     *utils.EthereumWallet
+	Wallet     *ethereum.Wallet
 	Client     *ethclient.Client
 	ABI        abi.ABI
 	Bind       *bind.BoundContract

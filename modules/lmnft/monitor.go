@@ -196,37 +196,37 @@ func (s *Settings) monitorDrops(networks []Network) bool {
 // scrapeInformation scrapes information from a collection page and
 // decodes it into a struct passed as a generic parameter.
 func scrapeInformation[T any](input string) (T, error) {
-	var t T
+	var response T
 
 	inputURL, err := url.Parse(input)
 	if err != nil {
-		return t, err
+		return response, err
 	}
 
 	resp, err := http.DefaultClient.Do(&http.Request{Method: http.MethodGet, URL: inputURL})
 	if err != nil {
-		return t, err
+		return response, err
 	}
 
 	if resp.StatusCode != 200 {
-		return t, fmt.Errorf("scrape info error: expected %d, got %d", http.StatusOK, resp.StatusCode)
+		return response, fmt.Errorf("scrape info error: expected %d, got %d", http.StatusOK, resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return t, err
+		return response, err
 	}
 
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
 	if err != nil {
-		return t, err
+		return response, err
 	}
 
-	if err = json.NewDecoder(strings.NewReader(doc.Find("script[id=__NEXT_DATA__]").Text())).Decode(&t); err != nil {
-		return t, err
+	if err = json.NewDecoder(strings.NewReader(doc.Find("script[id=__NEXT_DATA__]").Text())).Decode(&response); err != nil {
+		return response, err
 	}
 
-	return t, nil
+	return response, nil
 }
 
 func doRequest(networks []Network) (*http.Response, error) {

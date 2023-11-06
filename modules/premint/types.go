@@ -7,7 +7,7 @@ import (
 	tls_client "github.com/bogdanfinn/tls-client"
 	"github.com/weeaa/nft/discord/bot"
 	"github.com/weeaa/nft/pkg/handler"
-	"github.com/weeaa/nft/pkg/utils"
+	"github.com/weeaa/nft/pkg/utils/ethereum"
 	"time"
 )
 
@@ -16,8 +16,9 @@ const (
 )
 
 var (
-	maxRetriesReached = errors.New("maximum retries reached, aborting function")
-	RateLimited       = errors.New("you are rate limited :( you got to wait till you're unbanned, which is approx 5+ minutes")
+	maxRetriesReached    = errors.New("maximum retries reached, aborting function")
+	ErrRateLimited       = errors.New("you are rate limited :( you got to wait till you're unbanned, which is approx 5+ minutes")
+	ErrMaxRetriesReached = errors.New("error max retries reached")
 )
 
 type RaffleType string
@@ -44,11 +45,11 @@ type Settings struct {
 }
 
 type Profile struct {
-	Wallet        *utils.EthereumWallet
+	Wallet        *ethereum.Wallet
 	publicAddress string
 	privateKey    string
 
-	sessionId string
+	sessionID string
 	csrfToken string
 	nonce     string
 

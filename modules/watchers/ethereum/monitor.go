@@ -13,6 +13,7 @@ import (
 	"github.com/weeaa/nft/pkg/handler"
 	"github.com/weeaa/nft/pkg/logger"
 	"github.com/weeaa/nft/pkg/utils"
+	"github.com/weeaa/nft/pkg/utils/ethereum"
 	"time"
 )
 
@@ -75,7 +76,7 @@ func (s *Settings) monitorBalance(wallet common.Address, retryDelay time.Duratio
 			case <-ctx.Done():
 				return
 			default:
-				balanceNow, err := utils.GetEthWalletBalance(s.Client, address)
+				balanceNow, err := ethereum.GetEthWalletBalance(s.Client, address)
 				if err != nil {
 					logger.LogError(moduleName, err)
 					continue
@@ -100,8 +101,8 @@ func (s *Settings) monitorBalance(wallet common.Address, retryDelay time.Duratio
 						status = "Decreased ↘︎"
 					}
 
-					ethBalanceBefore := utils.WeiToEther(balanceBefore)
-					ethBalanceAfter := utils.WeiToEther(balanceNow)
+					ethBalanceBefore := ethereum.WeiToEther(balanceBefore)
+					ethBalanceAfter := ethereum.WeiToEther(balanceNow)
 
 					user, err = s.DB.Monitor.GetUserByAddress(address.String(), context.Background())
 					if err != nil {

@@ -9,8 +9,9 @@ import (
 	"github.com/bogdanfinn/tls-client"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/weeaa/nft/pkg/logger"
+	"github.com/rs/zerolog/log"
 	"github.com/weeaa/nft/pkg/tls"
+	"github.com/weeaa/nft/pkg/utils/ethereum"
 	"io"
 	"net/url"
 	"strings"
@@ -31,14 +32,15 @@ func NewProfile(publicAddress, privateKey, proxy string, retryDelay int) *Profil
 		Client:        client,
 		RetryDelay:    retryDelay,
 		isLoggedIn:    false,
+		Wallet:        ethereum.InitWallet(privateKey),
 	}
 }
 
 func (p *Profile) login() error {
 	retries := 0
-	for {
+	for i := 0; i < retries; i++ {
 
-		//first req to get cookies
+		// 1. Get cookies (session).
 		req := &http.Request{
 			Method: http.MethodGet,
 			URL:    &url.URL{Scheme: "https", Host: "www.premint.xyz", Path: "/login"},
@@ -55,25 +57,24 @@ func (p *Profile) login() error {
 			},
 		}
 
-		resp, err := s.Profile.Client.Do(req)
+		resp, err := p.Client.Do(req)
 		if err != nil {
 			continue
 		}
 
-		if resp.StatusCode != 200 {
-			if resp.StatusCode == 429 {
-				return RateLimited
+		if resp.StatusCode != http.StatusOK {
+			if resp.StatusCode == http.StatusTooManyRequests {
+				return ErrRateLimited
 			}
 			return fmt.Errorf("invalid response status: %s", resp.Status)
 		}
 
-		cookies := resp.Cookies()
-		for _, c := range cookies {
-			if c.Name == "csrftoken" {
-				s.Profile.csrfToken = c.Value
+		for _, cookie := range resp.Cookies() {
+			if cookie.Name == "csrftoken" {
+				p.csrfToken = cookie.Value
 			}
-			if c.Name == "session_id" {
-				s.Profile.sessionId = c.Value
+			if cookie.Name == "session_id" {
+				p.sessionID = cookie.Value
 			}
 		}
 
@@ -81,9 +82,9 @@ func (p *Profile) login() error {
 			continue
 		}
 
-		//second req is following the flow of the login 🌞
+		// 2. Initiate login.
 		params := url.Values{
-			"username": {s.Profile.publicAddress},
+			"username": {p.publicAddress},
 		}
 
 		req = &http.Request{
@@ -109,14 +110,14 @@ func (p *Profile) login() error {
 			},
 		}
 
-		resp, err = s.Profile.Client.Do(req)
+		resp, err = p.Client.Do(req)
 		if err != nil {
 			continue
 		}
 
-		if resp.StatusCode != 200 {
-			if resp.StatusCode == 429 {
-				return RateLimited
+		if resp.StatusCode != http.StatusOK {
+			if resp.StatusCode == http.StatusTooManyRequests {
+				return ErrRateLimited
 			}
 			return fmt.Errorf("invalid response status: %s", resp.Status)
 		}
@@ -125,21 +126,16 @@ func (p *Profile) login() error {
 			continue
 		}
 
-		privateKey, err := crypto.HexToECDSA(p.privateKey)
-		if err != nil {
-			return err
-		}
-
 		if err = p.getNonce(); err != nil {
 			return err
 		}
 
-		signature, err := sign("Welcome to PREMINT!\n\nSigning is the only way we can truly know \nthat you are the owner of the wallet you \nare connecting. Signing is a safe, gas-less \ntransaction that does not in any way give \nPREMINT permission to perform any \ntransactions with your wallet.\n\nWallet address:\n"+p.publicAddress+"\n\nNonce: "+p.nonce, privateKey)
+		signature, err := sign("Welcome to PREMINT!\n\nSigning is the only way we can truly know \nthat you are the owner of the wallet you \nare connecting. Signing is a safe, gas-less \ntransaction that does not in any way give \nPREMINT permission to perform any \ntransactions with your wallet.\n\nWallet address:\n"+p.publicAddress+"\n\nNonce: "+p.nonce, p.Wallet.PrivateKey)
 		if err != nil {
 			return err
 		}
 
-		//third req completes login & update sessionId cookie
+		// 3. Finish login & refresh sessionID.
 		req = &http.Request{
 			Method: http.MethodPost,
 			URL:    &url.URL{Scheme: "https", Host: "www.premint.xyz", Path: "/v1/login_api/"},
@@ -168,17 +164,16 @@ func (p *Profile) login() error {
 			continue
 		}
 
-		if resp.StatusCode != 200 {
-			if resp.StatusCode == 429 {
-				return RateLimited
+		if resp.StatusCode != http.StatusOK {
+			if resp.StatusCode == http.StatusForbidden {
+				return ErrRateLimited
 			}
 			return fmt.Errorf("invalid response status: %s", resp.Status)
 		}
 
-		cookieSess := resp.Cookies()
-		for _, c := range cookieSess {
-			if c.Name == "session_id" {
-				p.sessionId = c.Value
+		for _, cookie := range resp.Cookies() {
+			if cookie.Name == "session_id" {
+				p.sessionID = cookie.Value
 			}
 		}
 
@@ -186,16 +181,14 @@ func (p *Profile) login() error {
 			continue
 		}
 
-		break
+		p.isLoggedIn = true
+		log.Info().Bool("premint account login", p.isLoggedIn)
+
+		return nil
 	}
 
-	s.Profile.isLoggedIn = true
-
-	if s.Verbose {
-		logger.LogInfo(moduleName, "logged in account!")
-	}
-
-	return nil
+	p.isLoggedIn = false
+	return ErrMaxRetriesReached
 }
 
 func (p *Profile) getNonce() error {
@@ -227,9 +220,11 @@ func (p *Profile) getNonce() error {
 		return err
 	}
 
+	defer resp.Body.Close()
+
 	if resp.StatusCode != 200 {
 		if resp.StatusCode == 429 {
-			return RateLimited
+			return ErrRateLimited
 		}
 		return fmt.Errorf("invalid response status: %s", resp.Status)
 	}
@@ -239,17 +234,13 @@ func (p *Profile) getNonce() error {
 		return err
 	}
 
-	var nr map[string]any
-	if err = json.Unmarshal(body, &nr); err != nil {
+	var nonceResponse map[string]any
+	if err = json.Unmarshal(body, &nonceResponse); err != nil {
 		return err
 	}
 
-	if err = resp.Body.Close(); err != nil {
-		return err
-	}
-
-	if nr["success"].(bool) {
-		p.nonce = nr["data"].(string)
+	if nonceResponse["success"].(bool) {
+		p.nonce = nonceResponse["data"].(string)
 		return nil
 	} else {
 		return errors.New("unable to get nonce")
@@ -268,5 +259,5 @@ func sign(message string, privateKey *ecdsa.PrivateKey) (string, error) {
 }
 
 func (p *Profile) getCookieHeader() string {
-	return fmt.Sprintf("csrftoken=%s;session_id=%s", p.csrfToken, p.sessionId)
+	return fmt.Sprintf("csrftoken=%s;session_id=%s", p.csrfToken, p.sessionID)
 }

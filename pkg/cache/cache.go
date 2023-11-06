@@ -11,12 +11,12 @@ type Handler struct {
 
 var (
 	DefaultExpiration = 5 * time.Minute
-	DefaultPort       = ":6379"
+	DefaultListenAddr = ":6379"
 )
 
-func Initialize(port string) *Handler {
+func Initialize(listenAddr string) *Handler {
 	return &Handler{Client: redis.NewClient(&redis.Options{
-		Addr:     "localhost" + port,
+		Addr:     "localhost" + listenAddr,
 		Password: "",
 		DB:       0,
 	})}

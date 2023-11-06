@@ -1,10 +1,12 @@
 package files
 
 import (
+	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"github.com/jszwec/csvutil"
 	"github.com/weeaa/nft/pkg/utils"
+	"gopkg.in/yaml.v3"
 	"os"
 )
 
@@ -44,11 +46,11 @@ func ReadJSON[T any](filePath string) (T, error) {
 }
 
 func WriteJSON(filePath string, data any) error {
-	file, err := json.MarshalIndent(data, "", " ")
-	if err != nil {
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(data); err != nil {
 		return err
 	}
-	return os.WriteFile(filePath, file, 0777)
+	return os.WriteFile(filePath, buf.Bytes(), 0777)
 }
 
 func CreateCSV(filePath string, keys [][]string) {
@@ -70,4 +72,28 @@ func CreateFile(filePath string) {
 		f, _ := os.OpenFile(utils.ExecPath+filePath, os.O_CREATE|os.O_WRONLY, 0666)
 		f.Close()
 	}
+}
+
+func CreateYAML[T any](filePath string, dataEncoded T) error {
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	err = yaml.NewEncoder(file).Encode(&dataEncoded)
+	return err
+}
+
+func ReadYAML[T any](filePath string) (T, error) {
+	var dataDecoded T
+
+	f, err := os.OpenFile(filePath, os.O_RDWR, 0644)
+	if err != nil {
+		return dataDecoded, err
+	}
+
+	err = yaml.NewDecoder(f).Decode(&dataDecoded)
+	return dataDecoded, err
 }

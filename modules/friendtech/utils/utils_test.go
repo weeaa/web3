@@ -26,15 +26,16 @@ func TestGetUserInformation(t *testing.T) {
 
 func TestW(t *testing.T) {
 	followers := 133000
-	i := AssertImportance(followers, Followers)
+	i := AssertImportance(followers, "", Followers)
 	log.Println(i)
 }
 
-func TestAssertImportance(t *testing.T) {
+func TestAssertImportanceFollowers(t *testing.T) {
 
 	var tests = []struct {
-		followers   int
-		expectedImp Importance
+		followers    int
+		expectedImp  Importance
+		expectedChan string
 	}{
 		{
 			followers:   2000,
@@ -61,6 +62,10 @@ func TestAssertImportance(t *testing.T) {
 			t.Error(fmt.Errorf("expected %s, got %s", test.expectedImp, imp))
 		}
 	}
+
+}
+
+func TestAssertImportanceBalance(t *testing.T) {
 
 }
 

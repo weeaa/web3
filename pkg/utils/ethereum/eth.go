@@ -1,9 +1,10 @@
-package utils
+package ethereum
 
 import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	http "github.com/bogdanfinn/fhttp"
@@ -19,18 +20,22 @@ import (
 	"net/url"
 )
 
-type EthereumWallet struct {
+var (
+	ErrNotContract = errors.New("address is not a contract")
+)
+
+type Wallet struct {
 	PrivateKey *ecdsa.PrivateKey
 	PublicKey  common.Address
 }
 
-func InitWallet(privateStrKey string) *EthereumWallet {
+func InitWallet(privateStrKey string) *Wallet {
 	privateKey, err := crypto.HexToECDSA(privateStrKey)
 	if err != nil {
 		return nil
 	}
 
-	return &EthereumWallet{
+	return &Wallet{
 		PrivateKey: privateKey,
 		PublicKey:  crypto.PubkeyToAddress(privateKey.PublicKey),
 	}
@@ -40,7 +45,6 @@ func HexEncodeTxData(data []byte) string {
 	return fmt.Sprintf("0x%s", hex.EncodeToString(data))
 }
 
-// WeiToEther actually works with most currencies
 func WeiToEther(wei *big.Int) *big.Float {
 	return new(big.Float).SetPrec(236).SetMode(big.ToNearestEven).Quo(new(big.Float).SetPrec(236).SetMode(big.ToNearestAway).SetInt(wei), big.NewFloat(params.Ether))
 }
@@ -65,25 +69,25 @@ func SliceToAddresses(wallets []string) []common.Address {
 	return addresses
 }
 
-func GenerateEthWallet() *EthereumWallet {
+func GenerateEthWallet() (*Wallet, error) {
 	privateKey, err := crypto.GenerateKey()
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	publicKey := privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
-		return nil
+		return nil, fmt.Errorf("error casting ecdsa public key")
 	}
 
-	return &EthereumWallet{
+	return &Wallet{
 		PrivateKey: privateKey,
 		PublicKey:  common.HexToAddress(crypto.PubkeyToAddress(*publicKeyECDSA).Hex()),
-	}
+	}, nil
 }
 
-// DecodeTransactionInputData returns the tx data input (address, amount, etc).
+// DecodeTransactionInputData returns the transaction data input (address, amount, etc).
 func DecodeTransactionInputData(contractABI abi.ABI, txData string) (map[string]any, error) {
 	meth, err := hex.DecodeString(txData[2:10])
 	if err != nil {
@@ -109,15 +113,16 @@ func DecodeTransactionInputData(contractABI abi.ABI, txData string) (map[string]
 	return inputs, nil
 }
 
-func EthToUsd(ethAmount string) (string, error) {
-	rate, err := FetchRate(ethAmount)
+func EthToUsd() (map[string]string, error) {
+	rate, err := FetchRate()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return rate, nil
+	_ = rate
+	return make(map[string]string), nil
 }
 
-func FetchRate(ethAmount string) (string, error) {
+func FetchRate() (map[string]any, error) {
 	req := &http.Request{
 		Method: http.MethodGet,
 		URL:    &url.URL{Scheme: "https", Host: "api.coingecko.com", Path: "/api/v3/simple/price?ids=ethereum&vs_currencies=usd%2Ceur%2Cchf%2Ccad"},
@@ -134,19 +139,22 @@ func FetchRate(ethAmount string) (string, error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("client error: %w", err)
 	}
 
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-
+		return nil, err
 	}
 
 	var response map[string]any
-	_, _ = body, response
-	return "", nil
+	if err = json.Unmarshal(body, &response); err != nil {
+		return nil, err
+	}
+
+	return response, nil
 }
 
 // IsContract pulls code from an address, if there is no code it is an account address.
@@ -157,13 +165,13 @@ func IsContract(client *ethclient.Client, address common.Address) ([]byte, error
 	}
 
 	if len(code) == 0 {
-		return nil, errors.New("no")
+		return nil, ErrNotContract
 	} else {
 		return code, nil
 	}
 }
 
-func DisperseEthFunds(privateKey string, addresses []common.Address, amount *big.Int, client *ethclient.Client) ([]*types.Transaction, error) {
+func DisperseFunds(privateKey string, addresses []common.Address, amount *big.Int, client *ethclient.Client) ([]*types.Transaction, error) {
 	var transactions []*types.Transaction
 	wallet := InitWallet(privateKey)
 
@@ -178,9 +186,6 @@ func DisperseEthFunds(privateKey string, addresses []common.Address, amount *big
 		if err != nil {
 			return transactions, err
 		}
-
-		//var data []byte
-		//txx := types.NewTransaction(nonce, address, value, gasLimit, gasPrice, data)
 
 		chainID, err := client.NetworkID(context.Background())
 		if err != nil {
@@ -208,7 +213,7 @@ func DisperseEthFunds(privateKey string, addresses []common.Address, amount *big
 	return transactions, nil
 }
 
-func ConsolidateEthFunds(privateKeys []string, address common.Address, amount *big.Int, client *ethclient.Client) ([]*types.Transaction, error) {
+func ConsolidateFunds(privateKeys []string, address common.Address, amount *big.Int, client *ethclient.Client) ([]*types.Transaction, error) {
 	var transactions []*types.Transaction
 	for _, privateKey := range privateKeys {
 		wallet := InitWallet(privateKey)
@@ -226,7 +231,6 @@ func ConsolidateEthFunds(privateKeys []string, address common.Address, amount *b
 			return transactions, err
 		}
 
-		//gasLimit := uint64(21000) // in units
 		gasPrice, err := client.SuggestGasPrice(context.Background())
 		if err != nil {
 			return transactions, err

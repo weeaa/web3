@@ -19,11 +19,10 @@ import (
 	"github.com/weeaa/nft/modules/friendtech/constants"
 	fren_utils "github.com/weeaa/nft/modules/friendtech/utils"
 	"github.com/weeaa/nft/modules/twitter"
-	"github.com/weeaa/nft/pkg/cache"
 	"github.com/weeaa/nft/pkg/files"
 	"github.com/weeaa/nft/pkg/logger"
 	"github.com/weeaa/nft/pkg/tls"
-	"github.com/weeaa/nft/pkg/utils"
+	"github.com/weeaa/nft/pkg/utils/ethereum"
 	"io"
 	"math/big"
 	"net/url"
@@ -44,8 +43,10 @@ func NewFriendTech(db *db.DB, bot *bot.Bot, proxyFilePath, nodeURL string) (*Wat
 		return nil, err
 	}
 
-	// switch to file read
-	friendTechABI, _ := abi.JSON(strings.NewReader("[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"trader\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"subject\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isBuy\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"shareAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"ethAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"protocolEthAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"subjectEthAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"supply\",\"type\":\"uint256\"}],\"name\":\"Trade\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sharesSubject\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"buyShares\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sharesSubject\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"getBuyPrice\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sharesSubject\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"getBuyPriceAfterFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"supply\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"getPrice\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sharesSubject\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"getSellPrice\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sharesSubject\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"getSellPriceAfterFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"protocolFeeDestination\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"protocolFeePercent\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sharesSubject\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"sellShares\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_feeDestination\",\"type\":\"address\"}],\"name\":\"setFeeDestination\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_feePercent\",\"type\":\"uint256\"}],\"name\":\"setProtocolFeePercent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_feePercent\",\"type\":\"uint256\"}],\"name\":\"setSubjectFeePercent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"sharesBalance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"sharesSupply\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"subjectFeePercent\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"))
+	friendTechABI, err := abi.JSON(strings.NewReader(constants.ABI))
+	if err != nil {
+		return nil, err
+	}
 
 	return &Watcher{
 		DB:            db,
@@ -60,7 +61,6 @@ func NewFriendTech(db *db.DB, bot *bot.Bot, proxyFilePath, nodeURL string) (*Wat
 		PendingDepCtx: context.Background(),
 		Pool:          make(chan string),
 		ProxyList:     proxyList,
-		//Counter:       counter,
 	}, nil
 }
 
@@ -162,13 +162,13 @@ func (w *Watcher) WatchNewUsers() bool {
 
 		followers, _ := strconv.Atoi(nitter.Followers)
 
-		importance = fren_utils.AssertImportance(followers, fren_utils.Followers)
+		importance = fren_utils.AssertImportance(followers, 1, fren_utils.Followers)
 		if err != nil {
 			logger.LogError(watcher, err)
 		}
 	}
 
-	balance, err := utils.GetEthWalletBalance(w.WSSClient, common.HexToAddress(uInfo.Address))
+	balance, err := ethereum.GetEthWalletBalance(w.WSSClient, common.HexToAddress(uInfo.Address))
 	if err != nil {
 		logger.LogError(watcher, err)
 		return false
@@ -179,8 +179,8 @@ func (w *Watcher) WatchNewUsers() bool {
 		return false
 	}
 
-	displayedPrice := utils.WeiToEther(wei)
-	balanceEth := utils.WeiToEther(balance)
+	displayedPrice := ethereum.WeiToEther(wei)
+	balanceEth := ethereum.WeiToEther(balance)
 
 	var channelID string
 	var roleID string
@@ -266,9 +266,9 @@ func (w *Watcher) WatchNewUsersPool() {
 	wg := sync.WaitGroup{}
 	for {
 		user := <-w.Pool
-
-		logger.LogInfo(watcher, "pool add: "+user)
 		startTime := time.Now()
+
+		log.Info().Str("pool add", user)
 
 		wg.Add(1)
 		go func(address string) {
@@ -279,6 +279,7 @@ func (w *Watcher) WatchNewUsersPool() {
 
 				userInfo, err := fren_utils.GetUserInformation(address, w.WatcherClient)
 				if err != nil {
+					time.Sleep(3500 * time.Millisecond)
 					continue
 				}
 
@@ -286,29 +287,33 @@ func (w *Watcher) WatchNewUsersPool() {
 				var importance fren_utils.Importance
 				var displayedPrice *big.Float
 
-				{
-					nitter, err = twitter.FetchNitter(userInfo.TwitterUsername, w.WatcherClient)
-					if err != nil {
-						logger.LogError(watcher, err)
-						continue
-					}
-
-					followers, _ := strconv.Atoi(nitter.Followers)
-
-					importance = fren_utils.AssertImportance(followers, fren_utils.Followers)
-				}
-
-				balance, err := utils.GetEthWalletBalance(w.WSSClient, common.HexToAddress(userInfo.Address))
+				nitter, err = w.NitterClient.FetchNitter(userInfo.TwitterUsername)
 				if err != nil {
-					logger.LogError(watcher, err)
+					log.Error().Err(err)
 					continue
 				}
 
-				wei := new(big.Int)
-				wei.SetString(userInfo.DisplayPrice, 10)
-				displayedPrice = utils.WeiToEther(wei)
+				followers, err := strconv.Atoi(nitter.Followers)
+				if err != nil {
+					continue
+				}
 
-				balanceEth := utils.WeiToEther(balance)
+				importance = fren_utils.AssertImportance(followers, fren_utils.Followers)
+
+				balance, err := ethereum.GetEthWalletBalance(w.WSSClient, common.HexToAddress(userInfo.Address))
+				if err != nil {
+					log.Error().Err(err)
+					continue
+				}
+
+				wei, ok := new(big.Int).SetString(userInfo.DisplayPrice, 10)
+				if !ok {
+					continue
+				}
+
+				displayedPrice = ethereum.WeiToEther(wei)
+
+				balanceEth := ethereum.WeiToEther(balance)
 
 				var channelID string
 				var roleID string
@@ -326,11 +331,15 @@ func (w *Watcher) WatchNewUsersPool() {
 					channelID = bot.FriendTechNewUsers
 				}
 
-				// tood modify
-				w.OutStreamData <- BroadcastData{Event: NewSignup, Data: map[string]any{
-					"user":   userInfo,
-					"nitter": nitter,
-				}}
+				go func() {
+					w.OutStreamData <- BroadcastData{
+						Event: NewSignup,
+						Data: map[string]any{
+							"user":   userInfo,
+							"nitter": nitter,
+						},
+					}
+				}()
 
 				w.Bot.BotWebhook(&discordgo.MessageSend{
 					Content: roleID,
@@ -344,7 +353,7 @@ func (w *Watcher) WatchNewUsersPool() {
 								URL: userInfo.TwitterPfpUrl,
 							},
 							Footer: &discordgo.MessageEmbedFooter{
-								Text: "friend.tech – new users " + roleID,
+								Text: fmt.Sprintf("friend.tech – new users [%s]", roleID),
 							},
 							Fields: []*discordgo.MessageEmbedField{
 								{
@@ -381,7 +390,7 @@ func (w *Watcher) WatchNewUsersPool() {
 						},
 					},
 				}, channelID)
-				logger.LogInfo(watcher, fmt.Sprintf("%d | %s", w.Counter, userInfo.TwitterUsername))
+				log.Info().Str(fmt.Sprint(w.Counter), userInfo.TwitterUsername)
 			}
 		}(user)
 	}
@@ -392,7 +401,8 @@ func (w *Watcher) WatchAddNewUsers() {
 	for {
 		addresses, err := w.DB.Monitor.GetAllAddresses(context.Background())
 		if err != nil {
-			logger.LogError(watcher, err)
+			log.Err(err)
+			continue
 		}
 
 		for _, address := range addresses {
@@ -430,16 +440,17 @@ func (w *Watcher) doRequestPendingTxn() (*http.Response, error) {
 
 func (w *Watcher) SubscribeFriendTech() {
 	ch := make(chan types.Log)
-	sub, err := utils.CreateSubscription(w.WSSClient, []common.Address{common.HexToAddress(constants.FRIEND_TECH_CONTRACT_V1)}, ch)
+	sub, err := ethereum.CreateSubscription(w.WSSClient, []common.Address{common.HexToAddress(constants.FRIEND_TECH_CONTRACT_V1)}, ch)
 	if err != nil {
-		logger.LogFatal(watcher, err.Error())
+		log.Err(err)
 		return
 	}
 
+	log.Info().Str("friend tech subscription", "initialized")
 	for {
 		select {
 		case err = <-sub.Err():
-			logger.LogError(watcher, fmt.Errorf("subscription stopped: %w | attempting to restore", err))
+			log.Err(fmt.Errorf("subscription stopped: %w | attempting to restore", err))
 			go w.SubscribeFriendTech()
 			return
 		case tx := <-ch:
@@ -453,21 +464,19 @@ func (w *Watcher) dispatchLog(txn types.Log) {
 	var sender common.Address
 	var err error
 
-	logger.LogInfo(watcher, "tx found: "+txn.TxHash.String())
-
-	tx, _, err = w.WSSClient.TransactionByHash(context.Background(), txn.TxHash)
+	tx, _, err = w.HTTPClient.TransactionByHash(context.Background(), txn.TxHash)
 	if err != nil {
-		logger.LogError(watcher, err)
+		log.Err(err)
 		return
 	}
 
-	sender, err = utils.GetSender(tx)
+	sender, err = ethereum.GetSender(tx)
 	if err != nil {
-		logger.LogError(watcher, err)
+		log.Err(err)
 		return
 	}
 
-	txData := utils.HexEncodeTxData(tx.Data())
+	txData := ethereum.HexEncodeTxData(tx.Data())
 
 	if strings.Contains(txData, sellMethod) {
 		if err = w.handleSell(tx, sender.String(), txData); err != nil {
@@ -478,7 +487,7 @@ func (w *Watcher) dispatchLog(txn types.Log) {
 			logger.LogError(watcher, fmt.Errorf("handleBuy: %w", err))
 		}
 	} else {
-		logger.LogError(watcher, fmt.Errorf("unknown/unsupported tx type: %s", txData))
+		log.Err(fmt.Errorf("unknown/unsupported tx type: %s", txData))
 	}
 }
 
@@ -487,7 +496,7 @@ func (w *Watcher) handleSell(tx *types.Transaction, sender, txData string) error
 	var err error
 	var isBot bool
 
-	data, err := utils.DecodeTransactionInputData(w.ABI, txData)
+	data, err := ethereum.DecodeTransactionInputData(w.ABI, txData)
 	if err != nil {
 		return err
 	}
@@ -500,35 +509,29 @@ func (w *Watcher) handleSell(tx *types.Transaction, sender, txData string) error
 
 	senderInfo, _ := fren_utils.GetUserInformation(sender, w.WatcherClient)
 
-	sharePrice := new(big.Int)
-	sharePrice.SetString(senderInfo.DisplayPrice, 10)
+	sharePrice, ok := new(big.Int).SetString(senderInfo.DisplayPrice, 10)
+	if !ok {
+		return fmt.Errorf("error asserting sender.displayPrice as a big.Int [%s]", senderInfo.DisplayPrice)
+	}
 
 	recipientInfo, err := fren_utils.GetUserInformation(recipient.String(), w.WatcherClient)
 	if err != nil {
 		return err
 	}
 
-	balance, err := utils.GetEthWalletBalance(w.WSSClient, common.HexToAddress(sender))
+	balance, err := ethereum.GetEthWalletBalance(w.WSSClient, common.HexToAddress(sender))
 	if err != nil {
 		return err
 	}
 
 	if isSelf(hex.EncodeToString(tx.Data()), sender) {
-
-		/*
-			var item *memcache.Item
-			item, err = w.Cache.RetrieveData(sender)
-			if err != nil {
-				return err
-			}
-
-			if err = w.Cache.InsertData(sender, "self"); err != nil {
-				return err
-			}
-		*/
+		if ok = w.WatchRug(recipient); ok {
+			return nil
+		}
 
 		// goes to selfbuy chan
-		if _, ok := w.Addresses[strings.ToLower(sender)]; !ok { // means it's not on our list & doesn't go to filtered
+		if _, ok = w.Addresses[strings.ToLower(sender)]; !ok { // means it's not on our list & doesn't go to filtered
+			handleSelf()
 			var user *models.FriendTechMonitorAll
 
 			user, err = w.DB.MonitorAll.GetUserByAddress(sender, context.Background())
@@ -584,12 +587,12 @@ func (w *Watcher) handleSell(tx *types.Transaction, sender, txData string) error
 						Fields: []*discordgo.MessageEmbedField{
 							{
 								Name:   "Buyer Balance",
-								Value:  fmt.Sprintf("%v", utils.WeiToEther(balance)) + "Ξ",
+								Value:  fmt.Sprintf("%v", ethereum.WeiToEther(balance)) + "Ξ",
 								Inline: true,
 							},
 							{
 								Name:   "Sh. Amt. | Price",
-								Value:  fmt.Sprintf("%v | %v", sharesAmount, utils.WeiToEther(sharePrice)) + "Ξ",
+								Value:  fmt.Sprintf("%v | %v", sharesAmount, ethereum.WeiToEther(sharePrice)) + "Ξ",
 								Inline: true,
 							},
 							{
@@ -628,12 +631,12 @@ func (w *Watcher) handleSell(tx *types.Transaction, sender, txData string) error
 						Fields: []*discordgo.MessageEmbedField{
 							{
 								Name:   "Buyer Balance",
-								Value:  fmt.Sprintf("%v Ξ", utils.WeiToEther(balance)),
+								Value:  fmt.Sprintf("%v Ξ", ethereum.WeiToEther(balance)),
 								Inline: true,
 							},
 							{
 								Name:   "Sh. Amt. | Price",
-								Value:  fmt.Sprintf("%v | %v Ξ", sharesAmount, utils.WeiToEther(sharePrice)),
+								Value:  fmt.Sprintf("%v | %v Ξ", sharesAmount, ethereum.WeiToEther(sharePrice)),
 								Inline: true,
 							},
 							{
@@ -714,12 +717,12 @@ func (w *Watcher) handleSell(tx *types.Transaction, sender, txData string) error
 					Fields: []*discordgo.MessageEmbedField{
 						{
 							Name:   "Buyer Balance",
-							Value:  fmt.Sprintf("%v Ξ", utils.WeiToEther(balance)),
+							Value:  fmt.Sprintf("%v Ξ", ethereum.WeiToEther(balance)),
 							Inline: true,
 						},
 						{
 							Name:   "Sh. Amt. | Price",
-							Value:  fmt.Sprintf("%v | %v Ξ", sharesAmount, utils.WeiToEther(sharePrice)),
+							Value:  fmt.Sprintf("%v | %v Ξ", sharesAmount, ethereum.WeiToEther(sharePrice)),
 							Inline: true,
 						},
 						{
@@ -745,7 +748,7 @@ func (w *Watcher) handleBuy(tx *types.Transaction, sender, txData string) error 
 	var err error
 	var isBot bool
 
-	data, err := utils.DecodeTransactionInputData(w.ABI, txData)
+	data, err := ethereum.DecodeTransactionInputData(w.ABI, txData)
 	if err != nil {
 		return err
 	}
@@ -766,7 +769,7 @@ func (w *Watcher) handleBuy(tx *types.Transaction, sender, txData string) error 
 
 	recipientInfo, _ := fren_utils.GetUserInformation(recipient.String(), w.WatcherClient)
 
-	balance, err := utils.GetEthWalletBalance(w.WSSClient, common.HexToAddress(sender))
+	balance, err := ethereum.GetEthWalletBalance(w.WSSClient, common.HexToAddress(sender))
 	if err != nil {
 		return err
 	}
@@ -830,12 +833,12 @@ func (w *Watcher) handleBuy(tx *types.Transaction, sender, txData string) error 
 						Fields: []*discordgo.MessageEmbedField{
 							{
 								Name:   "Buyer Balance",
-								Value:  fmt.Sprintf("%v Ξ", utils.WeiToEther(balance)),
+								Value:  fmt.Sprintf("%v Ξ", ethereum.WeiToEther(balance)),
 								Inline: true,
 							},
 							{
 								Name:   "Sh. Amt. | Price",
-								Value:  fmt.Sprintf("%v | %v Ξ", sharesAmount, utils.WeiToEther(sharePrice)),
+								Value:  fmt.Sprintf("%v | %v Ξ", sharesAmount, ethereum.WeiToEther(sharePrice)),
 								Inline: true,
 							},
 							{
@@ -871,12 +874,12 @@ func (w *Watcher) handleBuy(tx *types.Transaction, sender, txData string) error 
 						Fields: []*discordgo.MessageEmbedField{
 							{
 								Name:   "Buyer Balance",
-								Value:  fmt.Sprintf("%v Ξ", utils.WeiToEther(balance)),
+								Value:  fmt.Sprintf("%v Ξ", ethereum.WeiToEther(balance)),
 								Inline: true,
 							},
 							{
 								Name:   "Sh. Amt. | Price",
-								Value:  fmt.Sprintf("%v | %v Ξ", sharesAmount, utils.WeiToEther(sharePrice)),
+								Value:  fmt.Sprintf("%v | %v Ξ", sharesAmount, ethereum.WeiToEther(sharePrice)),
 								Inline: true,
 							},
 							{
@@ -963,12 +966,12 @@ func (w *Watcher) handleBuy(tx *types.Transaction, sender, txData string) error 
 					Fields: []*discordgo.MessageEmbedField{
 						{
 							Name:   "Buyer Balance",
-							Value:  fmt.Sprintf("%v Ξ", utils.WeiToEther(balance)),
+							Value:  fmt.Sprintf("%v Ξ", ethereum.WeiToEther(balance)),
 							Inline: true,
 						},
 						{
 							Name:   "Sh. Amt. | Price",
-							Value:  fmt.Sprintf("%v | %v Ξ", sharesAmount, utils.WeiToEther(sharePrice)),
+							Value:  fmt.Sprintf("%v | %v Ξ", sharesAmount, ethereum.WeiToEther(sharePrice)),
 							Inline: true,
 						},
 						{
@@ -990,13 +993,39 @@ func (w *Watcher) handleBuy(tx *types.Transaction, sender, txData string) error 
 
 // WatchRug watches self-sells, if 2+ self sells occurs within 5
 // minutes we'll consider it as a rug.
-func (w *Watcher) WatchRug() {
-	w.Cache.InsertData("", "", cache.DefaultExpiration)
+func (w *Watcher) WatchRug(address common.Address) bool {
+	addressStr := address.String()
+	str := w.Cache.Client.Get(addressStr)
+	if i, err := str.Int(); err != nil {
+		return false
+	} else {
+		if !(i >= 5) {
+			i++
+			w.Cache.Client.Set(addressStr, i, 5*time.Minute)
+			return false
+		} else {
+			log.Info().Str("user rug/scam detected", addressStr)
+			go w.Bot.BotWebhook(&discordgo.MessageSend{
+				Components: bot.BundleQuickTaskComponents(addressStr, bot.FriendTech),
+				Embeds: []*discordgo.MessageEmbed{
+					{
+						Title:       "🚨 [RUG/SCAM] 🚨",
+						Description: fmt.Sprintf(""),
+						Color:       bot.Purple,
+					},
+				},
+			}, bot.FriendTechRugs)
+			return true
+		}
+	}
 }
 
-// serialize serializes data sent to the websocket.
-// todo finish func
-func (w *Watcher) serialize() {
+func (w *Watcher) handleSelf() {
+
+}
+
+// serializeToSocket serializes data sent to the websocket.
+func (w *Watcher) serializeToSocket() {
 	w.OutStreamData <- BroadcastData{}
 }
 

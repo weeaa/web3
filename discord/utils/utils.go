@@ -1,31 +1,28 @@
 package discord_utils
 
 import (
-	"fmt"
+	"errors"
 	"github.com/bwmarrin/discordgo"
 )
 
-func BundleUserInformation() {
+var (
+	ErrNotEnoughRights = errors.New("error: you don't have enough rights to perform this command")
+)
 
-}
-
-// isAllowed checks if the user performing the request has the right roles.
-func isAllowed(i *discordgo.InteractionCreate, s *discordgo.Session) error {
+// IsAllowed checks if the user performing the request has the right role(s).
+func IsAllowed(i *discordgo.InteractionCreate, s *discordgo.Session, rolesExpected []string) error {
 	member, err := s.GuildMember("GuildID", i.User.ID)
 	if err != nil {
 		return err
 	}
 
-	hasRequiredRole := false
 	for _, userRole := range member.Roles {
-		if userRole == "1156498768322117664" {
-			hasRequiredRole = true
-			break
+		for _, role := range rolesExpected {
+			if role == userRole {
+				return nil
+			}
 		}
 	}
 
-	if !hasRequiredRole {
-		return fmt.Errorf("invalid roles, you are not allowed to perform this command")
-	}
-	return nil
+	return ErrNotEnoughRights
 }

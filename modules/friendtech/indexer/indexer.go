@@ -32,10 +32,7 @@ func New(db *db.DB, proxyFilePath string, rotateEachReq bool, delay time.Duratio
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			files.CreateFile(filePath)
-
-			if err = files.WriteJSON(filePath, map[string]int{
-				"id": 11,
-			}); err != nil {
+			if err = files.WriteJSON(filePath, map[string]int{"id": 11}); err != nil {
 				return nil, err
 			}
 		} else {
@@ -43,13 +40,13 @@ func New(db *db.DB, proxyFilePath string, rotateEachReq bool, delay time.Duratio
 		}
 	}
 
+	if f["id"] < 11 {
+		return nil, fmt.Errorf("[%s] id can't be below 11 (got %d)", filePath, f["id"])
+	}
+
 	proxyList, err := tls.ReadProxyFile(proxyFilePath)
 	if err != nil {
 		return nil, err
-	}
-
-	if f["id"] < 11 {
-		return nil, fmt.Errorf("[%s] id can't be below 11 (got %d)", filePath, f["id"])
 	}
 
 	return &Indexer{

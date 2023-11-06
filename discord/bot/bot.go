@@ -3,9 +3,8 @@ package bot
 import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
-	"github.com/charmbracelet/log"
+	"github.com/rs/zerolog/log"
 	"github.com/weeaa/nft/database/db"
-	"github.com/weeaa/nft/pkg/logger"
 	"os"
 )
 
@@ -20,7 +19,7 @@ func New(db *db.DB) (*Bot, error) {
 		return nil, err
 	}
 
-	logger.LogInfo(discord, "Bot Ready")
+	log.Info().Str("discord bot", "ready")
 
 	bot := &Bot{s, db}
 
@@ -52,7 +51,7 @@ func (b *Bot) Stop() error {
 
 func (b *Bot) onReady(s *discordgo.Session, r *discordgo.Event) {
 	if err := s.UpdateListeningStatus("rugging 🖕"); err != nil {
-		log.Error(err)
+		log.Error().Err(err)
 		return
 	}
 }
@@ -87,10 +86,10 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Flags:   discordgo.MessageFlagsEphemeral,
-				Content: fmt.Sprintf("something went wrong: %s", err.Error()),
+				Content: fmt.Sprintf("something went wrong: %v", err),
 			},
 		}); err != nil {
-			log.Error(err)
+			log.Error().Err(err)
 		}
 	}
 }

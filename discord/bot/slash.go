@@ -48,8 +48,7 @@ func (b *Bot) registerCommands() {
 	}
 }
 
-// onSlashCommand is a handler: whenever a user performs a /slash
-// command, it will execute it.
+// onSlashCommand is a handler: whenever a user performs a /slash command, it will execute it.
 func (b *Bot) onSlashCommand(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	switch i.ApplicationCommandData().Name {
 	case "monitor_new_user":
@@ -92,7 +91,9 @@ func (b *Bot) onSlashCommand(s *discordgo.Session, i *discordgo.InteractionCreat
 			optionMap[opt.Name] = opt
 		}
 
-		userInfo, err := api.AddUserToMonitor(optionMap["base_address"].StringValue(), "weeaa")
+		baseAddressStr := optionMap["base_address"].StringValue()
+
+		userInfo, err := api.AddUserToMonitor(baseAddressStr, "weeaa")
 		if err != nil {
 			return b.ReturnErrorInteraction(i, err)
 		}
@@ -101,13 +102,13 @@ func (b *Bot) onSlashCommand(s *discordgo.Session, i *discordgo.InteractionCreat
 			Embeds: []*discordgo.MessageEmbed{
 				{
 					Title:       "🎩 | add_user",
-					Description: fmt.Sprintf("**[%s](https://x.com/%s)** is now monitored on Friend Tech.\n\n__Audit__\n > Imp. Status: **%s**\n> Followers: **%s**\n> ChatRoom: **[Link](https://www.friend.tech/rooms/%s)**", userInfo["twitter_name"], userInfo["twitter_username"], fmt.Sprint(userInfo["status"]), fmt.Sprint(userInfo["followers"]), optionMap["base_address"].StringValue()),
+					Description: fmt.Sprintf("**[%s](https://x.com/%s)** is now monitored on Friend Tech.\n\n__Audit__\n > Imp. Status: **%s**\n> Followers: **%s**\n> ChatRoom: **[Link](https://www.friend.tech/rooms/%s)**", userInfo["twitter_name"], userInfo["twitter_username"], fmt.Sprint(userInfo["status"]), fmt.Sprint(userInfo["followers"]), baseAddressStr),
 					Color:       Purple,
 					Thumbnail: &discordgo.MessageEmbedThumbnail{
-						URL: fmt.Sprint(userInfo["image"]),
+						URL: userInfo["image"].(string),
 					},
 					Footer: &discordgo.MessageEmbedFooter{
-						Text:    fmt.Sprintf("@friendtech — feed [%s]", optionMap["base_address"].StringValue()),
+						Text:    fmt.Sprintf("@friendtech — feed [%s]", baseAddressStr),
 						IconURL: "https://camo.githubusercontent.com/a0d06e6da8dcc033e33c2694eb550ffb775a3f805c7e2edd55758275a0862dd4/68747470733a2f2f63646e2e646973636f72646170702e636f6d2f6174746163686d656e74732f3638393036333238303335383036343135382f313133393533383030323034313839373034312f696d6167652e706e67",
 					},
 				},

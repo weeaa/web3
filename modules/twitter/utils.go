@@ -12,8 +12,7 @@ import (
 )
 
 // FetchNitter offers a reduced rate limit alternative (& free) to the Twitter API.
-func (c *Client) FetchNitter(username string) (NitterResponse, error) {
-	var nitter NitterResponse
+func (c *Client) FetchNitter(username string) (*NitterResponse, error) {
 
 	req := &http.Request{
 		Method: http.MethodGet,
@@ -38,26 +37,30 @@ func (c *Client) FetchNitter(username string) (NitterResponse, error) {
 
 	resp, err := c.Client.Do(req)
 	if err != nil {
-		return nitter, err
+		return nil, fmt.Errorf("nitter client error: %w", err)
 	}
 
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error getting twitter information: bad response status [%s]", resp.Status)
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nitter, err
+		return nil, err
 	}
 
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+	document, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
 	if err != nil {
-		return nitter, err
+		return nil, err
 	}
 
-	nitter.Followers = strings.ReplaceAll(doc.Find("li[class=followers]").Find("span[class=profile-stat-num]").Text(), ",", "")
-	nitter.JoinDate = doc.Find("div[class=profile-joindate]").Find("span").AttrOr("title", "")
-	nitter.AccountAge = getAccountAgeNitter(nitter.JoinDate)
-
-	return nitter, nil
+	return &NitterResponse{
+		Followers:  strings.ReplaceAll(document.Find("li[class=followers]").Find("span[class=profile-stat-num]").Text(), ",", ""),
+		JoinDate:   document.Find("div[class=profile-joindate]").Find("span").AttrOr("title", ""),
+		AccountAge: getAccountAgeNitter(document.Find("div[class=profile-joindate]").Find("span").AttrOr("title", "")),
+	}, nil
 }
 
 func GetAccountAge(date string) string {
@@ -72,13 +75,10 @@ func GetAccountAge(date string) string {
 }
 
 func getAccountAgeNitter(date string) string {
-	dateFormat := "3:04 PM - 2 Jan 2006"
-
-	t, err := time.Parse(dateFormat, date)
+	timeParsed, err := time.Parse("3:04 PM - 2 Jan 2006", date)
 	if err != nil {
 		return ""
 	}
 
-	days := int(math.Abs(time.Since(t).Hours() / 24))
-	return fmt.Sprintf("%d days", days)
+	return fmt.Sprintf("%d days", int(math.Abs(time.Since(timeParsed).Hours()/24)))
 }

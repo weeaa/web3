@@ -15,7 +15,7 @@ import (
 	"github.com/weeaa/nft/pkg/logger"
 	"github.com/weeaa/nft/pkg/safemap"
 	"github.com/weeaa/nft/pkg/tls"
-	"github.com/weeaa/nft/pkg/utils"
+	ethereum2 "github.com/weeaa/nft/pkg/utils/ethereum"
 	"math/big"
 	"strings"
 	"sync"
@@ -45,7 +45,7 @@ func New(privateKey, HTTPNodeUrl string, maxEthInput *big.Float, maxShareBuy int
 		Bind:        contract,
 		ABI:         friendTechABI,
 		PrivateKey:  privateKey,
-		Wallet:      utils.InitWallet(privateKey),
+		Wallet:      ethereum2.InitWallet(privateKey),
 		HttpClient:  tls.NewProxyLess(),
 		Client:      httpClient,
 		MaxEthInput: maxEthInput,

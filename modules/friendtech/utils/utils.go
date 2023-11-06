@@ -2,28 +2,36 @@ package fren_utils
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	http "github.com/bogdanfinn/fhttp"
 	"github.com/bogdanfinn/tls-client"
+	"github.com/rs/zerolog/log"
 	"github.com/weeaa/nft/modules/friendtech/constants"
-	"github.com/weeaa/nft/pkg/tls"
 	"io"
-	"log"
 	"math/big"
 	"net/url"
 )
 
+var (
+	ErrEmptyBearerToken = errors.New("error bearer token is empty")
+)
+
 type Client struct {
-	Bearer string
-	Client tls_client.HttpClient
+	Bearer  string
+	Client  tls_client.HttpClient
+	Proxies []string
 }
 
-func NewClient(bearer string) *Client {
-	return &Client{Bearer: "Bearer " + bearer, Client: tls.NewProxyLess()}
+func NewFriendTechUserClient(bearer string, client tls_client.HttpClient, proxies []string) *Client {
+	return &Client{Bearer: fmt.Sprintf("Bearer %s", bearer), Client: client, Proxies: proxies}
 }
 
 // AddWishList adds every user you want to your wishlist.
 func (c *Client) AddWishList(address string) error {
+	if c.Bearer == "" {
+		return ErrEmptyBearerToken
+	}
 
 	req := &http.Request{
 		Method: http.MethodPost,
@@ -60,13 +68,16 @@ func (c *Client) AddWishList(address string) error {
 		return fmt.Errorf("error adding to wishlist: %s", resp.Status)
 	}
 
-	// if resp is 200, you're good
+	log.Info().Str("watchlist add", address)
 
 	return nil
 }
 
 // RedeemCodes fetches all the invite codes of a user.
 func (c *Client) RedeemCodes() ([]string, error) {
+	if c.Bearer == "" {
+		return nil, ErrEmptyBearerToken
+	}
 
 	req := &http.Request{
 		Method: http.MethodGet,
@@ -181,7 +192,6 @@ func AssertImportance(t, v any, impType ImpType) Importance {
 
 		n, ok := t.(int)
 		if !ok {
-			log.Println("is not an int")
 			return none
 		}
 

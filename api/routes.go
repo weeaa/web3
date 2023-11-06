@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"github.com/weeaa/nft/api/controllers"
 	"github.com/weeaa/nft/api/groups"
 	"github.com/weeaa/nft/internal/services"
@@ -11,15 +12,21 @@ import (
 	"time"
 )
 
-var credentials = map[string]string{
-	os.Getenv("BASIC_USERNAME"): os.Getenv("BASIC_PASSWORD"),
-}
+func InitRoutes(router *gin.Engine, userService *services.UserService) {
+	configureRouter(router)
 
-func InitRoutes(router *gin.Engine, traderService *services.UserService) {
-	apiGroup := router.Group("/v1", gin.BasicAuth(credentials))
-	{
-		groups.InitUserRoutes(apiGroup, wireTraderHandler(traderService))
+	credentials, ok := isBasicValid()
+	if !ok {
+		log.Error().Bool("basic auth set", ok)
+		return
 	}
+
+	apiGroup := router.Group("/v1", gin.BasicAuth(credentials))
+
+	{
+		groups.InitUserRoutes(apiGroup, wireUserHandler(userService))
+	}
+
 	apiGroup.POST("/ping", pong)
 }
 
@@ -36,9 +43,21 @@ func configureRouter(router *gin.Engine) {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}
+
 	router.Use(cors.New(config))
 }
 
-func wireTraderHandler(service *services.UserService) *controllers.UserController {
+func isBasicValid() (map[string]string, bool) {
+	credentials := make(map[string]string)
+	username, ok := os.LookupEnv("BASIC_USERNAME")
+	if !ok {
+		return nil, false
+	}
+	password, ok := os.LookupEnv("BASIC_PASSWORD")
+	credentials[username] = password
+	return credentials, ok
+}
+
+func wireUserHandler(service *services.UserService) *controllers.UserController {
 	return controllers.NewUserController(*service)
 }
