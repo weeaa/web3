@@ -2,6 +2,7 @@ package bitcoin
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/btcutil"
@@ -10,11 +11,8 @@ import (
 	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"math"
-	"math/big"
 )
 
 type Wallet struct {
@@ -31,6 +29,7 @@ type Client struct {
 	Client *rpcclient.Client
 }
 
+/*
 func NewClienct() {
 	connCfg := &rpcclient.ConnConfig{
 		Host:         "127.0.0.1:8332", // The Bitcoin Core server host and port.
@@ -39,11 +38,13 @@ func NewClienct() {
 		HTTPPostMode: true,
 		DisableTLS:   true,
 	}
+
 	client, err := rpcclient.New(connCfg, nil)
 	if err != nil {
 		log.Fatalf("Error connecting to the Bitcoin network: %v", err)
 	}
 }
+*/
 
 func InitBtcWallet(privateStrKey string) (*Wallet, error) {
 	privateKey, err := crypto.HexToECDSA(privateStrKey)
@@ -101,80 +102,138 @@ func GenerateBtcTaprootWallet() (*Wallet, error) {
 	}, nil
 }
 
-func DisperseFunds(privateKey string, addresses []btcutil.Address, amount int64, client *rpcclient.Client) {
-	utxos, err := client.ListUnspentMinMaxAddresses(0, math.MaxInt32, addresses)
+func DisperseFunds(privateKey string, addresses []btcutil.Address, amount int64, client *rpcclient.Client) ([]*chainhash.Hash, error) {
+	wallet, err := InitBtcWallet(privateKey)
 	if err != nil {
-
+		return nil, err
 	}
+
+	utxos, err := client.ListUnspentMinMaxAddresses(0, math.MaxInt32, []btcutil.Address{wallet.PublicKey})
+	if err != nil {
+		return nil, err
+	}
+
+	txns := make([]*chainhash.Hash, len(addresses))
 
 	for _, address := range addresses {
-		var destinationScript []byte
+		var tx = wire.NewMsgTx(wire.TxVersion)
+		var totalAmount int64
+		var pkScript []byte
+		var txHash *chainhash.Hash
+		var wif *btcutil.WIF
+		var sigScript []byte
 
-		tx := wire.NewMsgTx(wire.TxVersion)
-		destinationScript, err = txscript.PayToAddrScript(address)
+		for _, unspent := range utxos {
+			txIn := wire.NewTxIn(&wire.OutPoint{Hash: chainhash.HashH([]byte(unspent.TxID)), Index: unspent.Vout}, nil, nil)
+			tx.AddTxIn(txIn)
+			totalAmount += int64(unspent.Amount)
+		}
+
+		pkScript, err = txscript.PayToAddrScript(address)
 		if err != nil {
-
+			return txns, err
 		}
 
-		txOut := wire.NewTxOut(amount, destinationScript)
-		tx.AddTxOut(txOut)
+		tx.AddTxOut(wire.NewTxOut(amount, pkScript))
 
-		for i, utxo := range utxos {
-
-			sig, err := txscript.SignTxOutput(&chaincfg.MainNetParams, tx, i, []byte(utxo.ScriptPubKey), txscript.SigHashAll, privateKey, txscript.KeyClosure(nil), nil)
+		if totalAmount > amount {
+			change := totalAmount - amount
+			pkScript, err = txscript.PayToAddrScript(wallet.PublicKey)
 			if err != nil {
-				return err
+				return txns, err
 			}
-
-			tx.TxIn[i].SignatureScript = sig
+			tx.AddTxOut(wire.NewTxOut(change, pkScript))
 		}
 
+		wif, err = btcutil.DecodeWIF(fmt.Sprint(wallet.PrivateKey))
+		if err != nil {
+			return txns, err
+		}
+
+		for i, txIn := range tx.TxIn {
+			sigScript, err = txscript.SignatureScript(tx, i, pkScript, txscript.SigHashAll, wif.PrivKey, true)
+			if err != nil {
+				return txns, err
+			}
+			txIn.SignatureScript = sigScript
+		}
+
+		txHash, err = client.SendRawTransaction(tx, false)
+		if err != nil {
+			return txns, err
+		}
+
+		txns = append(txns, txHash)
 	}
 
-	inputTxHash, err := wire.NewAlertFromPayload("input_transaction_hash")
-	if err != nil {
-		log.Fatalf("Error parsing input transaction hash: %v", err)
-	}
-	prevOutPoint := wire.NewOutPoint(inputTxHash, 0)
-	txIn := wire.NewTxIn(prevOutPoint, nil, nil)
-	tx.AddTxIn(txIn)
-	// Add output(s) to the transaction, including the destination address.
-	destinationAddress := "destination_bitcoin_address"
-	destinationScript, err := txscript.PayToAddrScript(destinationAddress, &chaincfg.MainNetParams)
-	if err != nil {
-		log.Fatalf("Error creating destination script: %v", err)
-	}
-	txOut := wire.NewTxOut(20000000, destinationScript) // 0.2 BTC in satoshis (20000000)
-	tx.AddTxOut(txOut)
-
-	// Sign the transaction inputs.
-	// You will need to sign the input using the private key associated with the UTXO.
-	// For simplicity, we omit the signing part here.
-	privateKey, err := btcec.NewPrivateKey()
-	if err != nil {
-		log.Fatalf("Error creating a private key: %v", err)
-	}
-
-	// Sign the transaction input.
-	// Replace 'tx' and 'inputIndex' with your transaction and the index of the input to sign.
-	sig, err := txscript.SignTxOutput(&chaincfg.MainNetParams, tx, inputIndex, destinationScript, txscript.SigHashAll, privateKey, txscript.KeyClosure(nil), nil, nil)
-	if err != nil {
-		log.Fatalf("Error signing the transaction: %v", err)
-	}
-
-	tx.TxIn[inputIndex].SignatureScript = sig
-	// Send the signed transaction to the Bitcoin network.
-	txid, err := client.SendRawTransaction(tx, false)
-	if err != nil {
-		log.Fatalf("Error broadcasting the transaction: %v", err)
-	}
-
+	return txns, nil
 }
 
-func ConsolidateFunds(privateKeys []string, address common.Address, amount *big.Int, client *ethclient.Client) {
+func ConsolidateFunds(privateKeys []string, address btcutil.Address, amount int64, client *rpcclient.Client) ([]*chainhash.Hash, error) {
+	txns := make([]*chainhash.Hash, len(privateKeys))
+
 	for _, privateKey := range privateKeys {
-		_ = privateKey
+		var tx = wire.NewMsgTx(wire.TxVersion)
+		var totalAmount int64
+		var pkScript []byte
+		var txHash *chainhash.Hash
+		var wif *btcutil.WIF
+		var sigScript []byte
+
+		wallet, err := InitBtcWallet(privateKey)
+		if err != nil {
+			return nil, err
+		}
+
+		utxos, err := client.ListUnspentMinMaxAddresses(0, math.MaxInt32, []btcutil.Address{wallet.PublicKey})
+		if err != nil {
+			return nil, err
+		}
+
+		for _, unspent := range utxos {
+			txIn := wire.NewTxIn(&wire.OutPoint{Hash: chainhash.HashH([]byte(unspent.TxID)), Index: unspent.Vout}, nil, nil)
+			tx.AddTxIn(txIn)
+			totalAmount += int64(unspent.Amount)
+		}
+
+		pkScript, err = txscript.PayToAddrScript(address)
+		if err != nil {
+			return txns, err
+		}
+
+		tx.AddTxOut(wire.NewTxOut(amount, pkScript))
+
+		if totalAmount > amount {
+			change := totalAmount - amount
+			pkScript, err = txscript.PayToAddrScript(wallet.PublicKey)
+			if err != nil {
+				return txns, err
+			}
+			tx.AddTxOut(wire.NewTxOut(change, pkScript))
+		}
+
+		wif, err = btcutil.DecodeWIF(fmt.Sprint(wallet.PrivateKey))
+		if err != nil {
+			return txns, err
+		}
+
+		for i, txIn := range tx.TxIn {
+			sigScript, err = txscript.SignatureScript(tx, i, pkScript, txscript.SigHashAll, wif.PrivKey, true)
+			if err != nil {
+				return txns, err
+			}
+			txIn.SignatureScript = sigScript
+		}
+
+		txHash, err = client.SendRawTransaction(tx, false)
+		if err != nil {
+			return txns, err
+		}
+
+		txns = append(txns, txHash)
 	}
+
+	return txns, nil
 }
 
 func ConsolidateOrdinals(privateKeys []string, address btcutil.AddressTaproot, tokenID string, client *rpcclient.Client) {
@@ -182,4 +241,5 @@ func ConsolidateOrdinals(privateKeys []string, address btcutil.AddressTaproot, t
 }
 
 func ConsolidateBRC20(privateKeys []string, address btcutil.AddressTaproot, BRC20TokenID string, client *rpcclient.Client) {
+
 }
