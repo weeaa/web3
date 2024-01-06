@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	http "github.com/bogdanfinn/fhttp"
+	"github.com/bogdanfinn/fhttp"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -18,10 +18,28 @@ import (
 	"io"
 	"math/big"
 	"net/url"
+	"time"
+)
+
+const (
+	// WssDefaultNode & HttpDefaultNode are free nodes provided by merkle.io team 😃
+	WssDefaultNode  = "wss://eth.merkle.io"
+	HttpDefaultNode = "https://eth.merkle.io"
+
+	BaseWSS_DefaultNode  = ""
+	BaseHTTP_DefaultNode = ""
+
+	ArbWSS_DefaultNode  = ""
+	ArbHTTP_DefaultNode = ""
+
+	PolWSS_DefaultNode  = ""
+	PolHTTP_DefaultNode = ""
 )
 
 var (
-	ErrNotContract = errors.New("address is not a contract")
+	httpClient = &http.Client{Timeout: 20 * time.Second}
+
+	ErrNotContract = errors.New("address is not a bindings")
 )
 
 type Wallet struct {
@@ -69,7 +87,8 @@ func SliceToAddresses(wallets []string) []common.Address {
 	return addresses
 }
 
-func GenerateEthWallet() (*Wallet, error) {
+// GenerateWallet generates a wallet which you can use on the Ethereum chain.
+func GenerateWallet() (*Wallet, error) {
 	privateKey, err := crypto.GenerateKey()
 	if err != nil {
 		return nil, err
@@ -85,6 +104,10 @@ func GenerateEthWallet() (*Wallet, error) {
 		PrivateKey: privateKey,
 		PublicKey:  common.HexToAddress(crypto.PubkeyToAddress(*publicKeyECDSA).Hex()),
 	}, nil
+}
+
+func GenerateHardWallet() error {
+	return nil
 }
 
 // DecodeTransactionInputData returns the transaction data input (address, amount, etc).
@@ -137,7 +160,7 @@ func FetchRate() (map[string]any, error) {
 		},
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("client error: %w", err)
 	}
@@ -172,7 +195,7 @@ func IsContract(client *ethclient.Client, address common.Address) ([]byte, error
 }
 
 func DisperseFunds(privateKey string, addresses []common.Address, amount *big.Int, client *ethclient.Client) ([]*types.Transaction, error) {
-	var transactions []*types.Transaction
+	transactions := make([]*types.Transaction, len(addresses))
 	wallet := InitWallet(privateKey)
 
 	for _, address := range addresses {
@@ -260,4 +283,8 @@ func ConsolidateFunds(privateKeys []string, address common.Address, amount *big.
 		transactions = append(transactions, tx)
 	}
 	return transactions, nil
+}
+
+func ConsolidateERC721() {
+
 }
